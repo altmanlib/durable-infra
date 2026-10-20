@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # npm dependencies are not managed here: Dependabot's bun updater only reads
+  # bun.lock lockfileVersion 1, while bun >= 1.4 writes version 2.
+  # See docs/guide/release.md §3 for the manual upgrade procedure.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
