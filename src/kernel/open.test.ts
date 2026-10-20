@@ -81,7 +81,7 @@ test("a shared conversation has the modules' shared tools and the privileged one
       "current_time",
       "delete_memo",
       "get_memo",
-      "gitea_create_issue",
+      "gitea_issue_create",
       "list_memos",
       "list_reminders",
       "list_settings",

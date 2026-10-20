@@ -13,7 +13,7 @@ import { issueSignature } from "./texts.ts";
  * Filing an issue on the group's Gitea repository: open to everyone in a
  * group for now, deferred so only shared conversations are offered it, installed only when Gitea is configured.
  */
-export const GITEA_CREATE_ISSUE = "gitea_create_issue";
+export const GITEA_ISSUE_CREATE = "gitea_issue_create";
 
 export const MAX_ISSUE_TITLE_CHARS = 200;
 export const MAX_ISSUE_BODY_CHARS = 10_000;
@@ -55,11 +55,11 @@ const answers = {
 
 export function createGiteaIssueTool(deps: { settings: ConversationSettings; prompts: PromptSource; gitea: GiteaTools }) {
   return defineTool({
-    name: GITEA_CREATE_ISSUE,
-    description: deps.prompts.get("tool.gitea_create_issue.description"),
+    name: GITEA_ISSUE_CREATE,
+    description: deps.prompts.get("tool.gitea_issue_create.description"),
     parameters: Type.Object({
-      title: Type.String({ description: deps.prompts.get("tool.gitea_create_issue.title") }),
-      body: Type.String({ description: deps.prompts.get("tool.gitea_create_issue.body") }),
+      title: Type.String({ description: deps.prompts.get("tool.gitea_issue_create.title") }),
+      body: Type.String({ description: deps.prompts.get("tool.gitea_issue_create.body") }),
     }),
     deferred: true,
     // Filing twice files two issues; an interrupted call is reported to the model instead.

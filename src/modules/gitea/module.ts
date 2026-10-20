@@ -2,7 +2,7 @@ import type { SettingSpec } from "../../kernel/conversation-settings/index.ts";
 import type { Module } from "../../kernel/module.ts";
 import { log } from "../../platform/log.ts";
 import { GiteaHttpClient } from "./client.ts";
-import { createGiteaIssueTool, GITEA_CREATE_ISSUE, type GiteaTools } from "./gitea.ts";
+import { createGiteaIssueTool, GITEA_ISSUE_CREATE, type GiteaTools } from "./gitea.ts";
 import { GITEA_PROMPTS } from "./prompts.ts";
 import { giteaRepoSetting } from "./settings.ts";
 
@@ -46,7 +46,7 @@ export function giteaModule(config: GiteaConfig): Module {
   return {
     name: "gitea",
     prompts: GITEA_PROMPTS,
-    sharedTools: [GITEA_CREATE_ISSUE],
+    sharedTools: [GITEA_ISSUE_CREATE],
     async prepare() {
       log.info("gitea.configured", { host: new URL(config.url).host });
       return [gitea.repo as SettingSpec<unknown>];

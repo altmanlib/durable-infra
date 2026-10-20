@@ -5,7 +5,7 @@ import type { TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { createRegistry, Harness } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
-import { GITEA_CREATE_ISSUE, type GiteaTools } from "../../modules/gitea/gitea.ts";
+import { GITEA_ISSUE_CREATE, type GiteaTools } from "../../modules/gitea/gitea.ts";
 import { GiteaHttpClient, giteaRepoSetting } from "../../modules/gitea/index.ts";
 import { MEMO_TOOLS } from "../../modules/memo/memo.ts";
 import { type MemoEntries, openMemoEntries } from "../../modules/memo/records/index.ts";
@@ -441,15 +441,15 @@ test("with Gitea a group is offered the issue tool and anyone may file one, sign
   try {
     script = callOnce("set_setting", { name: "gitea.repo", value: "team/app" });
     await (await agents.send("group", "issue 记到 team/app", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })).answer;
-    script = callOnce(GITEA_CREATE_ISSUE, { title: "登录页报错", body: "背景" });
+    script = callOnce(GITEA_ISSUE_CREATE, { title: "登录页报错", body: "背景" });
     await (await agents.send("group", "记个 issue", "r2", { speaker: { id: "ou_guest", name: "Guest" }, shared: true })).answer;
     script = answerOk;
     await (await agents.send("private", "hi", "r3", { speaker: { id: "ou_a" } })).answer;
   } finally {
     script = answerOk;
   }
-  expect(offered[0]).toEqual(expect.arrayContaining([GITEA_CREATE_ISSUE, ...SETTINGS_TOOLS]));
-  expect(offered.at(-1)).not.toContain(GITEA_CREATE_ISSUE);
+  expect(offered[0]).toEqual(expect.arrayContaining([GITEA_ISSUE_CREATE, ...SETTINGS_TOOLS]));
+  expect(offered.at(-1)).not.toContain(GITEA_ISSUE_CREATE);
   expect(results[0]).toContain("Team/App");
   expect(results[1]).toContain(`${fakeGitea.url}/Team/App/issues/1`);
   const filed = fakeGitea.seen.find((seen) => seen.method === "POST")?.body as { body: string } | undefined;

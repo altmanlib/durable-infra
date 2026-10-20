@@ -9,7 +9,7 @@ import { Records } from "../../platform/records/records.ts";
 import { FAKE_GITEA_TOKEN, type FakeGitea, startFakeGitea } from "../../testing/fake-gitea.ts";
 import { captureLogs, defaultPrompts, toolDeps } from "../../testing/testing.ts";
 import { builtinTools, PRIVILEGED_TOOLS, SHARED_TOOLS } from "../../testing/tools.ts";
-import { createGiteaIssueTool, GITEA_CREATE_ISSUE, type GiteaTools, MAX_ISSUE_BODY_CHARS, MAX_ISSUE_TITLE_CHARS } from "./gitea.ts";
+import { createGiteaIssueTool, GITEA_ISSUE_CREATE, type GiteaTools, MAX_ISSUE_BODY_CHARS, MAX_ISSUE_TITLE_CHARS } from "./gitea.ts";
 import { GiteaHttpClient, giteaRepoSetting } from "./index.ts";
 
 let records: Records | undefined;
@@ -54,15 +54,15 @@ const run = (tool: { execute: (...args: never[]) => unknown }, args: Record<stri
   (tool.execute as (args: unknown, api: unknown, context: unknown) => Promise<Result>)(args, on, BACKGROUND_CONTEXT);
 
 test("installed only with Gitea, deferred and not replayed; everyone in a group may use it", async () => {
-  expect(builtinTools(toolDeps()).map((tool) => tool.name)).not.toContain(GITEA_CREATE_ISSUE);
+  expect(builtinTools(toolDeps()).map((tool) => tool.name)).not.toContain(GITEA_ISSUE_CREATE);
   const { tools, settings } = await setup();
   const installed = builtinTools(toolDeps({ settings, gitea: tools }));
-  const tool = installed.find((candidate) => candidate.name === GITEA_CREATE_ISSUE);
+  const tool = installed.find((candidate) => candidate.name === GITEA_ISSUE_CREATE);
   expect([tool?.deferred, tool?.replay]).toEqual([true, "unsafe"]);
   // Last, after the settings tools.
-  expect(installed.at(-1)?.name).toBe(GITEA_CREATE_ISSUE);
-  expect(SHARED_TOOLS).toContain(GITEA_CREATE_ISSUE);
-  expect(PRIVILEGED_TOOLS).not.toContain(GITEA_CREATE_ISSUE);
+  expect(installed.at(-1)?.name).toBe(GITEA_ISSUE_CREATE);
+  expect(SHARED_TOOLS).toContain(GITEA_ISSUE_CREATE);
+  expect(PRIVILEGED_TOOLS).not.toContain(GITEA_ISSUE_CREATE);
 });
 
 test("an issue is filed in the group's repository, one line of title, signed with who asked, and its address comes back", async () => {
