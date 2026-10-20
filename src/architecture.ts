@@ -166,8 +166,8 @@ export const ZONES: Zone[] = [
   },
   {
     name: "scripts",
-    paths: ["architecture.ts", "architecture.test.ts"],
-    why: "the checker of the layers is not held to them",
+    paths: ["architecture.ts", "architecture.test.ts", "probe-durable.ts"],
+    why: "the checker of the layers and the probe of Durable's contract are not held to them",
     free: true,
   },
 ];

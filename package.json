@@ -11,7 +11,8 @@
     "src",
     "!src/**/*.test.ts",
     "!src/**/fixtures",
-    "!src/architecture.ts"
+    "!src/architecture.ts",
+    "!src/probe-durable.ts"
   ],
   "sideEffects": false,
   "repository": {
@@ -42,6 +43,7 @@
   "scripts": {
     "lint": "biome check --write .",
     "typecheck": "bun check",
+    "probe": "bun run src/probe-durable.ts",
     "test": "bun test",
     "check": "biome check . && bun check && bun test",
     "check:package": "publint",
