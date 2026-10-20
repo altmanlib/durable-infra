@@ -7,7 +7,13 @@ import type { AgentExtension } from "../kernel/service/host.ts";
 import { createAppStatusTool } from "../modules/clock/app-status.ts";
 import { createClockTool } from "../modules/clock/clock.ts";
 import { clockModule } from "../modules/clock/index.ts";
-import { createGiteaIssueTool } from "../modules/gitea/gitea.ts";
+import {
+  createGiteaIssueCommentTool,
+  createGiteaIssueEditTool,
+  createGiteaIssueGetTool,
+  createGiteaIssueListTool,
+  createGiteaIssueTool,
+} from "../modules/gitea/gitea.ts";
 import { giteaModule } from "../modules/gitea/module.ts";
 import { memoModule, memoSection } from "../modules/memo/index.ts";
 import { createDeleteMemoTool, createGetMemoTool, createListMemosTool, createSetMemoTool } from "../modules/memo/memo.ts";
@@ -55,7 +61,15 @@ export function builtinTools(deps: AllDeps): ToolRegistration[] {
     createSetMemoTool(deps),
     createDeleteMemoTool(deps),
     ...(deps.settings.catalog.empty ? [] : [createListSettingsTool(deps), createSetSettingTool(deps), createClearSettingTool(deps)]),
-    ...(deps.gitea ? [createGiteaIssueTool({ settings: deps.settings, prompts: deps.prompts, gitea: deps.gitea })] : []),
+    ...(deps.gitea
+      ? [
+          createGiteaIssueTool({ settings: deps.settings, prompts: deps.prompts, gitea: deps.gitea }),
+          createGiteaIssueListTool({ settings: deps.settings, prompts: deps.prompts, gitea: deps.gitea }),
+          createGiteaIssueGetTool({ settings: deps.settings, prompts: deps.prompts, gitea: deps.gitea }),
+          createGiteaIssueCommentTool({ settings: deps.settings, prompts: deps.prompts, gitea: deps.gitea }),
+          createGiteaIssueEditTool({ settings: deps.settings, prompts: deps.prompts, gitea: deps.gitea }),
+        ]
+      : []),
   ];
 }
 

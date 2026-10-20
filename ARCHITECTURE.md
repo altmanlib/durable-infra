@@ -297,13 +297,13 @@ The roster today:
 | `web` | `web_fetch` and `web_search` | Shared, read-only; no search tool without a provider |
 | `memo` | The memo of a shared conversation | Own table in the business database |
 | `settings-tools` | List, set and clear conversation settings (§8) | The model's door to the specs modules register |
-| `gitea` | File an issue on a group's Gitea | Its target is the conversation setting `gitea.repo` |
+| `gitea` | Work with issues on a group's Gitea: file, list, read, comment, edit | Its target is the conversation setting `gitea.repo` |
 
 Two of them show the shape of the outside world in this design. The web module's fetcher refuses this
 machine and private networks by default, its page answers come from a summariser (by default one call of
 the conversations' own model, without tools), and its search sits behind the `SearchProvider` interface
 — Tavily is the built-in provider, and any other must pass the same contract tests (§11). The gitea
-module is a client, a setting and a tool, and nothing more.
+module is a client, a setting and the five issue tools, and nothing more.
 
 **Persistent identifiers.** A module's tool names, task names, prompt ids, setting names and table
 names, the `builtin-tools` extension name, conversation keys, and the `kind` of every application

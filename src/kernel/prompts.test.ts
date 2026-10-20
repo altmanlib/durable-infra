@@ -103,11 +103,23 @@ const oneSetting = new ConversationSettings(
   { list: async () => [], read: async () => undefined, write: async () => {}, remove: async () => "missing" },
 );
 
-/** Gitea configured, so the issue tool is installed and its descriptions read (R050); it is never called here. */
+/** Gitea configured, so the issue tools are installed and their descriptions read (R050); none is ever called here. */
 const someGitea: GiteaTools = {
   client: {
     repo: async () => "missing",
     createIssue: async () => {
+      throw new Error("not called");
+    },
+    listIssues: async () => {
+      throw new Error("not called");
+    },
+    getIssue: async () => {
+      throw new Error("not called");
+    },
+    createComment: async () => {
+      throw new Error("not called");
+    },
+    editIssue: async () => {
       throw new Error("not called");
     },
   },
