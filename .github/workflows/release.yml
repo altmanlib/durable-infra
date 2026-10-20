@@ -28,4 +28,4 @@ jobs:
       - uses: changesets/action@v2
         with:
           publish-script: bun run release
-          create-github-releases: true
+          create-github-releases: false
