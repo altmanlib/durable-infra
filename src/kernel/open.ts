@@ -9,6 +9,7 @@ import { LogReader } from "./insights/logs.ts";
 import type { Contribution, Module } from "./module.ts";
 import { EditablePrompts, KERNEL_PROMPTS, PromptCatalog, type PromptEntries, type PromptSource } from "./prompts.ts";
 import { AgentService, type AgentServiceOptions } from "./service/agent-service.ts";
+import type { ChangeLog } from "./settings/change-log.ts";
 import type { Settings } from "./settings/settings.ts";
 
 /**
@@ -47,6 +48,12 @@ export type OpenCoreOptions = {
   };
   /** Options of the conversation service, such as the tool round limit. */
   service?: ServiceOptions;
+  /**
+   * Where the application keeps the history of changes, made from the business database once that is open (`records`).
+   * Without it the history is a Durable document; with it the allowlist and `Settings.channel` are not available
+   * (see `AgentServiceOptions.changes`).
+   */
+  changes?: (records: Records) => ChangeLog | Promise<ChangeLog>;
   /** The models the conversations use, instead of the OpenAI-compatible gateway that `config` describes; for tests and other gateways. */
   llm?: { models: Models; model: ModelRef };
   now?: () => Date;
@@ -84,8 +91,10 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
     });
     const sharedTools = modules.flatMap((module) => module.sharedTools ?? []);
     const privilegedTools = modules.flatMap((module) => module.privilegedTools ?? []);
+    const changes = await options.changes?.(records);
     const agent = await AgentService.open({
       ...options.service,
+      ...(changes ? { changes } : {}),
       databasePath: config.databasePath,
       models,
       model,

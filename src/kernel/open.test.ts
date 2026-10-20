@@ -12,6 +12,7 @@ import { loadCoreConfig } from "./config.ts";
 import type { Module } from "./module.ts";
 import { type Core, type OpenCoreOptions, openCore } from "./open.ts";
 import { entry } from "./prompts.ts";
+import type { Change } from "./settings/change-log.ts";
 
 const { faux, models, model } = fauxSetup();
 const dir = tempDirPerTest("open-");
@@ -159,4 +160,22 @@ test("the application version and start time reach the modules", async () => {
   ]);
   await (await core.agent.send("k", "status", "r1")).answer;
   expect(answer).toContain("1.2.3");
+});
+
+test("an application that keeps the history of changes in its business database gets the open records to make its log from", async () => {
+  const kept: Change[] = [];
+  let given: unknown;
+  core = await open([clockModule()], {
+    changes: (records) => {
+      given = records;
+      return {
+        record: async (change) => void kept.push({ seq: kept.length + 1, ...change }),
+        page: async () => ({ items: [...kept].reverse() }),
+      };
+    },
+  });
+  expect(given).toBe(core.records);
+  await core.settings.recordAction("chan:1", "reset");
+  expect(kept.map((change) => [change.area, change.target])).toEqual([["conversation", "chan:1"]]);
+  expect((await core.settings.changes()).items).toHaveLength(1);
 });

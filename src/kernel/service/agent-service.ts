@@ -80,25 +80,16 @@ export type CompactOutcome = "compacted" | "skipped";
 export type OwnsKey = (key: ConversationKey) => boolean;
 
 /**
- * Everything a channel uses of the conversations: answering, recording, its commands, replaying after a restart, and notices. A
+ * Everything a channel uses of the conversations: answering, its commands, replaying after a restart, and notices. A
  * channel takes this, never the whole service; a part of a channel takes a smaller Pick of it.
  */
 export type ChannelService = Pick<
   AgentService,
-  | "send"
-  | "record"
-  | "keepRecent"
-  | "reset"
-  | "compact"
-  | "history"
-  | "delivered"
-  | "pending"
-  | "notices"
-  | "onNotice"
-  | "ackNotice"
-  | "schedule"
-  | "unschedule"
+  "send" | "reset" | "compact" | "history" | "delivered" | "pending" | "notices" | "onNotice" | "ackNotice" | "schedule" | "unschedule"
 >;
+
+/** What a channel with shared conversations, such as groups, uses besides that: recording what was not addressed to it, and keeping the context short. */
+export type SharedChannelService = ChannelService & Pick<AgentService, "record" | "keepRecent">;
 
 /** What a channel may say about an input besides its text. */
 export type SendOptions = {

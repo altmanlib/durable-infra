@@ -20,6 +20,7 @@ import {
 } from "../kernel/prompts.ts";
 import type { AgentExtension } from "../kernel/service/host.ts";
 import { messageText, splitSpeaker } from "../kernel/service/transcript.ts";
+import type { Change, ChangeLog, ChangePage } from "../kernel/settings/change-log.ts";
 import { CLOCK_PROMPTS } from "../modules/clock/prompts.ts";
 import type { GiteaTools } from "../modules/gitea/gitea.ts";
 import { GITEA_PROMPTS } from "../modules/gitea/prompts.ts";
@@ -150,3 +151,23 @@ export function continueOnce(text = "go on"): AgentExtension {
     ],
   };
 }
+
+/** A history of changes in memory, newest last, that can be made to fail: the `ChangeLog` of an application's own, for tests. */
+export class MemoryChangeLog implements ChangeLog {
+  readonly all: Change[] = [];
+  failing = false;
+
+  async record(change: Omit<Change, "seq">): Promise<void> {
+    if (this.failing) throw new Error("the table is gone");
+    this.all.push({ seq: this.all.length + 1, ...change });
+  }
+
+  async page(options: { limit: number; before?: number }): Promise<ChangePage> {
+    const older = this.all.filter((change) => options.before === undefined || change.seq < options.before);
+    const items = older.slice(-options.limit).reverse();
+    const last = items.at(-1);
+    return { items, ...(last !== undefined && older.length > items.length ? { next: last.seq } : {}) };
+  }
+}
+
+export const memoryChangeLog = (): MemoryChangeLog => new MemoryChangeLog();

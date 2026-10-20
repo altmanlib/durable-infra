@@ -31,6 +31,7 @@ export {
   type OwnsKey,
   type PendingTurn,
   type SendOptions,
+  type SharedChannelService,
   type Turn,
   TurnFailed,
 } from "./service/agent-service.ts";
@@ -51,7 +52,7 @@ export { isEvent, type Notice, type ScheduledEvent } from "./service/notices.ts"
 export type { HistoryLine, Speaker } from "./service/transcript.ts";
 export { ROUND_SEPARATOR, type ToolActivity } from "./service/turn-feed.ts";
 export { AccessList, type AllowlistView, type ChannelAccess, type ChannelList, type DeniedUser } from "./settings/access.ts";
-export type { Change } from "./settings/docs.ts";
+export type { Change, ChangeLog } from "./settings/change-log.ts";
 export {
   type ChangePage,
   type ChannelDoc,

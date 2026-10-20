@@ -1,9 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai/providers/faux";
-import { captureLogs, tempDirPerTest, testPrompts } from "../../testing/testing.ts";
+import { captureLogs, memoryChangeLog, tempDirPerTest, testPrompts } from "../../testing/testing.ts";
 import { AgentService } from "../service/agent-service.ts";
-import type { Change, ChangeLog, ChangePage } from "./change-log.ts";
+import type { ChangeLog } from "./change-log.ts";
 import { SettingsError } from "./error.ts";
 
 // An application that keeps the history of changes itself (its business database) hands the service a `ChangeLog`: the
@@ -15,22 +15,6 @@ models.setProvider(faux.provider);
 const OLD = { provider: "faux", modelId: "old" };
 const NEW = { provider: "faux", modelId: "new" };
 const dir = tempDirPerTest("external-log-");
-
-/** A history in memory, newest last, that can be made to fail. */
-class MemoryLog implements ChangeLog {
-  readonly all: Change[] = [];
-  failing = false;
-  async record(change: Omit<Change, "seq">): Promise<void> {
-    if (this.failing) throw new Error("the table is gone");
-    this.all.push({ seq: this.all.length + 1, ...change });
-  }
-  async page(options: { limit: number; before?: number }): Promise<ChangePage> {
-    const older = this.all.filter((change) => options.before === undefined || change.seq < options.before);
-    const items = older.slice(-options.limit).reverse();
-    const last = items.at(-1);
-    return { items, ...(last !== undefined && older.length > items.length ? { next: last.seq } : {}) };
-  }
-}
 
 const opened: AgentService[] = [];
 afterEach(async () => {
@@ -51,7 +35,7 @@ async function open(changes: ChangeLog, model = OLD): Promise<AgentService> {
 }
 
 test("a prompt edit and an action on a conversation are noted in the application's log, and the console reads them from there", async () => {
-  const log = new MemoryLog();
+  const log = memoryChangeLog();
   const service = await open(log);
   await service.settings.setPrompt("system.preamble", "Persona.", 0);
   await service.settings.recordAction("chan:1", "reset");
@@ -65,7 +49,7 @@ test("a prompt edit and an action on a conversation are noted in the application
 });
 
 test("an application may note changes of its own area, but not of the kernel's", async () => {
-  const log = new MemoryLog();
+  const log = memoryChangeLog();
   const service = await open(log);
   await service.settings.record({ area: "account", target: "acc-1", before: "active", after: "disabled" });
   expect(log.all.map((change) => [change.area, change.target])).toEqual([["account", "acc-1"]]);
@@ -77,7 +61,7 @@ test("an application may note changes of its own area, but not of the kernel's",
 });
 
 test("when the application's log fails the change stands and the failure is logged", async () => {
-  const log = new MemoryLog();
+  const log = memoryChangeLog();
   const service = await open(log);
   log.failing = true;
   const lines = await captureLogs(async () => {
@@ -89,7 +73,7 @@ test("when the application's log fails the change stands and the failure is logg
 });
 
 test("conversations moved to the configured model are noted in the application's log, one entry per previous model", async () => {
-  const log = new MemoryLog();
+  const log = memoryChangeLog();
   const first = await open(log, OLD);
   faux.setResponses([() => fauxAssistantMessage("hi")]);
   await (await first.send("chan:1", "hello", "r1")).answer;
@@ -104,7 +88,7 @@ test("conversations moved to the configured model are noted in the application's
 });
 
 test("the allowlist and the channels' documents write their history in their own commits, so they are not there", async () => {
-  const service = await open(new MemoryLog());
+  const service = await open(memoryChangeLog());
   expect(() => service.settings.access).toThrow("not available");
   expect(() => service.settings.channel("wechat")).toThrow("not available");
 });
