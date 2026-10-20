@@ -1,0 +1,63 @@
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
+import type { ConversationId, Cursor, EntryRecord, Harness, Storage, UsageState } from "@earendil-works/pi-durable";
+
+const context = BACKGROUND_CONTEXT;
+const PAGE = 200;
+/** Entries `lastActivity` looks at before giving up: bookkeeping entries carry no message. */
+const RECENT_ENTRIES = 20;
+
+/**
+ * Read-only access to what the storage holds, for queries. It never commits and never schedules work, so reading
+ * alongside running conversations is safe. Harness lists no conversations, so that one read goes to the storage.
+ */
+export class SessionReader {
+  readonly #harness: Harness;
+  readonly #storage: Storage;
+
+  constructor(harness: Harness, storage: Storage) {
+    this.#harness = harness;
+    this.#storage = storage;
+  }
+
+  /** Every conversation ID, in ascending order. */
+  async *conversations(): AsyncIterable<ConversationId> {
+    let cursor: Cursor | undefined;
+    do {
+      const page = await this.#storage.scanConversations({}, PAGE, cursor, context);
+      for (const record of page.items) yield record.id;
+      cursor = page.next;
+    } while (cursor !== undefined);
+  }
+
+  /**
+   * Entries the conversation itself appended, newest first. Entries a fork inherits from its parent are left out, so
+   * reading every conversation sees each entry once.
+   */
+  async *entries(conversationId: ConversationId): AsyncIterable<EntryRecord> {
+    let cursor: Cursor | undefined;
+    do {
+      const page = await this.#storage.scanEntries({ conversationId }, PAGE, cursor, context);
+      for (const entry of page.items) if (entry.conversationId === conversationId) yield entry;
+      cursor = page.next;
+    } while (cursor !== undefined);
+  }
+
+  /**
+   * When the conversation last said or heard something: the latest message time among its newest entries, or undefined
+   * when none of them carries one. Looks at a few entries only, since the newest ones decide it.
+   */
+  async lastActivity(conversationId: ConversationId): Promise<number | undefined> {
+    let looked = 0;
+    for await (const entry of this.entries(conversationId)) {
+      const times = (entry.model ?? []).map((message) => message.timestamp).filter((at): at is number => typeof at === "number");
+      if (times.length > 0) return Math.max(...times);
+      if (++looked >= RECENT_ENTRIES) return undefined;
+    }
+    return undefined;
+  }
+
+  /** Spend Durable has counted across every conversation, including what no entry carries. */
+  usage(): Promise<UsageState> {
+    return this.#harness.usage(context);
+  }
+}
