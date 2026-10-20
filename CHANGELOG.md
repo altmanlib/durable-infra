@@ -1,5 +1,11 @@
 # @altmanlib/durable-infra
 
+## 0.5.1
+
+### Patch Changes
+
+- c7f0105: Comments no longer point to design documents that are not in this repository. No change in behaviour.
+
 ## 0.5.0
 
 ### Minor Changes
