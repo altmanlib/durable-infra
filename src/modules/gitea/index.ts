@@ -18,4 +18,4 @@ export {
 export { type GiteaConfig, giteaConfigFromEnv, giteaModule } from "./module.ts";
 export { GITEA_PROMPTS } from "./prompts.ts";
 export { type GiteaRepoRef, giteaRepoSetting, repoOf } from "./settings.ts";
-export { issueSignature } from "./texts.ts";
+export { commentSignature, issueSignature } from "./texts.ts";

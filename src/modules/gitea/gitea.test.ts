@@ -250,6 +250,8 @@ test("a comment is posted signed with who asked, and its address comes back", as
   const body = (sent?.body as { body: string } | undefined)?.body ?? "";
   expect(body.startsWith("已复现")).toBe(true);
   expect(body).toContain("小王");
+  expect(body).toContain("评论");
+  expect(body).not.toContain("创建");
   const read = await run(getTool, { issue: 1 });
   expect(textOf(read)).toContain("2 comments");
 });
@@ -295,6 +297,7 @@ test("an edit with nothing to change, a bad title or a missing issue sends nothi
   expect(codeOf(await run(editTool, { issue: 1 }))).toBe("invalid_input");
   expect(codeOf(await run(editTool, { issue: 1, title: " \n" }))).toBe("invalid_input");
   expect(codeOf(await run(editTool, { issue: 1, title: "x".repeat(MAX_ISSUE_TITLE_CHARS + 1) }))).toBe("invalid_input");
+  expect(codeOf(await run(editTool, { issue: 1, body: "  " }))).toBe("invalid_input");
   expect(gitea.seen).toEqual([]);
   expect(codeOf(await run(editTool, { issue: 99, state: "closed" }))).toBe("not_found");
   gitea.editAnswers.push({ status: 500 });

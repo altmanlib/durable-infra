@@ -8,7 +8,7 @@ import { speakerOf } from "../../kernel/service/shared-tools.ts";
 import { log } from "../../platform/log.ts";
 import { type GiteaClient, GiteaError } from "./client.ts";
 import type { GiteaRepoRef } from "./settings.ts";
-import { issueSignature } from "./texts.ts";
+import { commentSignature, issueSignature } from "./texts.ts";
 
 /**
  * The issue tools of the group's Gitea repository: file one, list them, read
@@ -305,7 +305,7 @@ export function createGiteaIssueCommentTool(deps: { settings: ConversationSettin
 
       const speaker = await speakerOf(api, api.conversationId).catch(() => undefined);
       const by = speaker?.id ?? "";
-      const signature = issueSignature(speaker?.name || speaker?.id);
+      const signature = commentSignature(speaker?.name || speaker?.id);
       const body = `${args.body.trimEnd()}\n\n${signature}`;
       try {
         const comment = await deps.gitea.client.createComment(ref.owner, ref.repo, number, { body }, context.abortSignal);
@@ -399,6 +399,8 @@ export function createGiteaIssueEditTool(deps: { settings: ConversationSettings;
         changes.push("title changed");
       }
       if (args.body !== undefined) {
+        if (args.body.trim() === "")
+          return error("invalid_input", "The body is empty. Write the issue's body, or leave the body out to keep it.");
         if (args.body.length > MAX_ISSUE_BODY_CHARS)
           return error("invalid_input", `The body is at most ${MAX_ISSUE_BODY_CHARS} characters; this one has ${args.body.length}. Shorten it.`);
         patch.body = args.body;
