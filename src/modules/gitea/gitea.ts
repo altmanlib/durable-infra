@@ -399,8 +399,7 @@ export function createGiteaIssueEditTool(deps: { settings: ConversationSettings;
         changes.push("title changed");
       }
       if (args.body !== undefined) {
-        if (args.body.trim() === "")
-          return error("invalid_input", "The body is empty. Write the issue's body, or leave the body out to keep it.");
+        if (args.body.trim() === "") return error("invalid_input", "The body is empty. Write the issue's body, or leave the body out to keep it.");
         if (args.body.length > MAX_ISSUE_BODY_CHARS)
           return error("invalid_input", `The body is at most ${MAX_ISSUE_BODY_CHARS} characters; this one has ${args.body.length}. Shorten it.`);
         patch.body = args.body;
