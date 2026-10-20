@@ -1,4 +1,10 @@
 node_modules/
+
+# Local planning and design notes: not part of the code, not tracked
+/ROADMAP.md
+/docs/
+.playwright-cli/
+
 dist/
 .env
 .data/
