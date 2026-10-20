@@ -105,3 +105,80 @@ test("a Gitea not reached is a network error; the caller's signal stops a call t
   setTimeout(() => stop.abort(), 50);
   expect((await failure(slow.repo("team", "app", stop.signal))).kind).toBe("network");
 });
+
+test("issues are listed by state, newest first, capped by the limit, and pull requests are not asked for", async () => {
+  const { gitea, client } = setup();
+  gitea.repos.set("team/app", {
+    full_name: "Team/App",
+    seedIssues: [
+      { title: "First", author: "alice", labels: ["bug"], comments: ["hi"] },
+      { title: "Second", state: "closed", author: "bob" },
+      { title: "Third" },
+    ],
+  });
+  expect(await client.listIssues("team", "app", { state: "open", limit: 20 })).toEqual([
+    { number: 3, title: "Third", state: "open", url: `${gitea.url}/Team/App/issues/3`, author: "someone", comments: 0, updatedAt: "2026-01-01T00:00:00.000Z" },
+    { number: 1, title: "First", state: "open", url: `${gitea.url}/Team/App/issues/1`, author: "alice", comments: 1, updatedAt: "2026-01-01T00:00:00.000Z" },
+  ]);
+  expect(gitea.seen[0]).toMatchObject({ method: "GET", path: "/api/v1/repos/team/app/issues?state=open&type=issues&page=1&limit=20" });
+  expect((await client.listIssues("team", "app", { state: "all", limit: 2 })).map((issue) => issue.number)).toEqual([3, 2]);
+  expect((await client.listIssues("team", "app", { state: "closed", limit: 20 })).map((issue) => issue.number)).toEqual([2]);
+  expect(await failure(client.listIssues("team", "nope", { state: "open", limit: 20 }))).toMatchObject({ kind: "status", status: 404 });
+});
+
+test("one issue is read whole; no such issue, or no such repository, is missing", async () => {
+  const { gitea, client } = setup();
+  gitea.repos.set("team/app", {
+    full_name: "Team/App",
+    seedIssues: [{ title: "First", body: "the body", author: "alice", labels: ["bug", "ui"], comments: ["hi", "me too"] }],
+  });
+  expect(await client.getIssue("team", "app", 1)).toEqual({
+    number: 1,
+    title: "First",
+    state: "open",
+    url: `${gitea.url}/Team/App/issues/1`,
+    author: "alice",
+    comments: 2,
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    body: "the body",
+    labels: ["bug", "ui"],
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+  expect(await client.getIssue("team", "app", 99)).toBe("missing");
+  expect(await client.getIssue("team", "nope", 1)).toBe("missing");
+});
+
+test("a comment is posted and comes back with its id and address; a filed issue can be read back whole", async () => {
+  const { gitea, client } = setup();
+  const filed = await client.createIssue("team", "app", { title: "Login fails", body: "steps" });
+  const comment = await client.createComment("team", "app", filed.number, { body: "looking into it" });
+  expect(comment).toEqual({ id: 1, url: `${gitea.url}/Team/App/issues/1#issuecomment-1` });
+  expect(gitea.seen.at(-1)).toMatchObject({ method: "POST", path: "/api/v1/repos/team/app/issues/1/comments", body: { body: "looking into it" } });
+  expect(await client.getIssue("team", "app", 1)).toMatchObject({ title: "Login fails", body: "steps", comments: 1 });
+  expect(await failure(client.createComment("team", "app", 99, { body: "x" }))).toMatchObject({ kind: "status", status: 404 });
+});
+
+test("an edit is patched through and comes back as the issue now stands", async () => {
+  const { gitea, client } = setup();
+  gitea.repos.set("team/app", { full_name: "Team/App", seedIssues: [{ title: "First" }] });
+  const edited = await client.editIssue("team", "app", 1, { title: "Renamed", state: "closed" });
+  expect(edited).toMatchObject({ number: 1, title: "Renamed", state: "closed" });
+  expect(gitea.seen.at(-1)).toMatchObject({ method: "PATCH", path: "/api/v1/repos/team/app/issues/1", body: { title: "Renamed", state: "closed" } });
+  expect(await client.getIssue("team", "app", 1)).toMatchObject({ title: "Renamed", state: "closed" });
+  expect(await failure(client.editIssue("team", "app", 99, { state: "closed" }))).toMatchObject({ kind: "status", status: 404 });
+});
+
+test("the new calls fail as the old ones do: garbage is unusable, a hang times out, a refusal carries its status", async () => {
+  const { gitea, client } = setup({ timeoutMs: 100 });
+  gitea.repos.set("team/app", { full_name: "Team/App", seedIssues: [{ title: "First" }] });
+  gitea.readAnswers.push("garbage");
+  expect((await failure(client.listIssues("team", "app", { state: "open", limit: 20 }))).kind).toBe("unusable");
+  gitea.readAnswers.push("hang");
+  expect((await failure(client.getIssue("team", "app", 1))).kind).toBe("timeout");
+  gitea.commentAnswers.push({ status: 500, message: `broke ${FAKE_GITEA_TOKEN}` });
+  const refused = await failure(client.createComment("team", "app", 1, { body: "x" }));
+  expect(refused).toMatchObject({ kind: "status", status: 500 });
+  expect(`${refused.message} ${refused.detail}`).not.toContain(FAKE_GITEA_TOKEN);
+  gitea.editAnswers.push({ status: 422 });
+  expect(await failure(client.editIssue("team", "app", 1, { state: "closed" }))).toMatchObject({ kind: "status", status: 422 });
+});

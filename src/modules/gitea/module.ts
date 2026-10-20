@@ -2,7 +2,19 @@ import type { SettingSpec } from "../../kernel/conversation-settings/index.ts";
 import type { Module } from "../../kernel/module.ts";
 import { log } from "../../platform/log.ts";
 import { GiteaHttpClient } from "./client.ts";
-import { createGiteaIssueTool, GITEA_ISSUE_CREATE, type GiteaTools } from "./gitea.ts";
+import {
+  createGiteaIssueCommentTool,
+  createGiteaIssueEditTool,
+  createGiteaIssueGetTool,
+  createGiteaIssueListTool,
+  createGiteaIssueTool,
+  GITEA_ISSUE_COMMENT_CREATE,
+  GITEA_ISSUE_CREATE,
+  GITEA_ISSUE_EDIT,
+  GITEA_ISSUE_GET,
+  GITEA_ISSUE_LIST,
+  type GiteaTools,
+} from "./gitea.ts";
 import { GITEA_PROMPTS } from "./prompts.ts";
 import { giteaRepoSetting } from "./settings.ts";
 
@@ -37,8 +49,8 @@ export function giteaConfigFromEnv(env: Record<string, string | undefined>): Git
 }
 
 /**
- * Filing an issue on the Gitea of a group: the setting `gitea.repo` and the
- * tool that uses it. An application that has no Gitea does not list the module.
+ * The Gitea of a group: the setting `gitea.repo` and the issue tools that use
+ * it. An application that has no Gitea does not list the module.
  */
 export function giteaModule(config: GiteaConfig): Module {
   const client = new GiteaHttpClient({ baseUrl: config.url, token: config.token });
@@ -46,11 +58,19 @@ export function giteaModule(config: GiteaConfig): Module {
   return {
     name: "gitea",
     prompts: GITEA_PROMPTS,
-    sharedTools: [GITEA_ISSUE_CREATE],
+    sharedTools: [GITEA_ISSUE_CREATE, GITEA_ISSUE_LIST, GITEA_ISSUE_GET, GITEA_ISSUE_COMMENT_CREATE, GITEA_ISSUE_EDIT],
     async prepare() {
       log.info("gitea.configured", { host: new URL(config.url).host });
       return [gitea.repo as SettingSpec<unknown>];
     },
-    contribute: ({ settings, prompts }) => ({ tools: [createGiteaIssueTool({ settings, prompts, gitea })] }),
+    contribute: ({ settings, prompts }) => ({
+      tools: [
+        createGiteaIssueTool({ settings, prompts, gitea }),
+        createGiteaIssueListTool({ settings, prompts, gitea }),
+        createGiteaIssueGetTool({ settings, prompts, gitea }),
+        createGiteaIssueCommentTool({ settings, prompts, gitea }),
+        createGiteaIssueEditTool({ settings, prompts, gitea }),
+      ],
+    }),
   };
 }
