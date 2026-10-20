@@ -1,7 +1,7 @@
 import type { Usage } from "@earendil-works/pi-ai";
 
 /**
- * The contract between the `web_search` tool and any search service (docs/design/2026-10-06-web-search.md §2). Nothing here knows
+ * The contract between the `web_search` tool and any search service. Nothing here knows
  * a particular service: types, the error, and the pure functions every provider uses to keep its answers inside it.
  */
 

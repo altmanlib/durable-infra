@@ -1,4 +1,4 @@
-// The executable form of the search contract (docs/design/2026-10-06-web-search.md §2). A provider's test supplies a way to build
+// The executable form of the search contract. A provider's test supplies a way to build
 // the provider on a fake backend that behaves as a scenario says; this file checks the rules every provider keeps.
 import { describe, expect, test } from "bun:test";
 import { MAX_RESULTS_LIMIT, MAX_SNIPPET_CHARS, SearchError, type SearchErrorKind, type SearchProvider } from "../modules/web/search.ts";

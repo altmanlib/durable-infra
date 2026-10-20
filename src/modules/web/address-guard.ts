@@ -5,7 +5,7 @@ import { FetchError } from "./fetcher.ts";
 /**
  * Addresses `web_fetch` may not reach: this machine, private and shared networks, link-local (cloud metadata at
  * 169.254.169.254), and the ranges that are not on the public internet. IPv4 inside IPv6 (`::ffff:10.0.0.1`) is caught
- * by the same IPv4 rules. Decided in R036, before groups got the tool (docs/design/2026-10-05-web-fetch.md §3.3).
+ * by the same IPv4 rules. Decided in R036, before groups got the tool.
  */
 const BLOCKED = new BlockList();
 for (const [network, prefix] of [

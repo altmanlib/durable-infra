@@ -4,7 +4,7 @@ import type { BaseDeps } from "../../kernel/module.ts";
 import { formatLocal } from "../../platform/local-time.ts";
 
 /**
- * Exact current time, as local time (docs/design/2026-10-13-local-time.md). The system prompt only carries the date, at day granularity, to keep the provider cache warm.
+ * Exact current time, as local time. The system prompt only carries the date, at day granularity, to keep the provider cache warm.
  * Read-only, so an interrupted call may simply run again.
  */
 export function createClockTool(deps: Pick<BaseDeps, "now" | "prompts">) {

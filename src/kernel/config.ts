@@ -12,7 +12,7 @@ export const DEFAULT_MAX_TOKENS = 8192;
 export type CoreConfig = {
   /** The session storage (Durable). */
   databasePath: string;
-  /** The business database: records that keep growing (docs/persistence.md §6). */
+  /** The business database: records that keep growing. */
   recordsPath: string;
   baseUrl: string;
   apiKey: string;

@@ -1,5 +1,5 @@
 /**
- * A Gitea that answers over real HTTP the two calls the issue tool makes (docs/design/2026-10-20-gitea-issue.md §2), for
+ * A Gitea that answers over real HTTP the two calls the issue tool makes, for
  * the tests of the client, the setting and the tool. Its token is a secret the tests look for in logs and errors.
  */
 

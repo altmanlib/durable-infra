@@ -1,6 +1,6 @@
 /**
  * Times as the model and the user see them: local wall-clock time, never a zone name, UTC or an offset
- * (docs/design/2026-10-13-local-time.md). Everything the tools say or accept about time goes through here, so the
+ *. Everything the tools say or accept about time goes through here, so the
  * zone is chosen in one place: `zone` defaults to the service's own and becomes a per-user value later without
  * touching the tools.
  */

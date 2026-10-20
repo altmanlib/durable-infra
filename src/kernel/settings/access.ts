@@ -31,8 +31,7 @@ type Stored = { channels: Record<string, string[]>; versions: Record<string, num
 const sorted = (ids: Iterable<string>): string[] => [...new Set(ids)].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 
 /**
- * Who may use each channel, kept in storage so the console can change it without a restart (docs/design/2026-10-06-console.md
- * §3.3). A channel opens its list when it starts: the first time, the list it is configured with becomes the stored
+ * Who may use each channel, kept in storage so the console can change it without a restart. A channel opens its list when it starts: the first time, the list it is configured with becomes the stored
  * one, and from then on the stored list rules. Every message asks `allows`, which answers from memory.
  */
 export class AccessList {

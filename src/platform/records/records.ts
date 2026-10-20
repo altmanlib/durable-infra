@@ -40,7 +40,7 @@ function codeOf(error: unknown): string {
 }
 
 /**
- * The business database (docs/persistence.md §6): records that keep growing and are looked up by field, which do not
+ * The business database: records that keep growing and are looked up by field, which do not
  * need to be committed together with Durable's storage. The core holds the file and nothing in it: each domain brings
  * its own tables with `tables(domain, migrations)`, and reads and writes them itself. The database is closed with
  * `close()`, after the channels stopped writing.

@@ -1,7 +1,7 @@
 const DEFAULT_MAX_KEYS = 1000;
 
 /**
- * Lets something happen at most once in an interval for each key, in memory (docs/persistence.md §8): a warning in the
+ * Lets something happen at most once in an interval for each key, in memory: a warning in the
  * log that a flood of the same trouble would repeat for every message. The first time is always allowed. Time is given
  * by the caller, so a test can move it.
  */

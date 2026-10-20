@@ -13,7 +13,7 @@ export type OutboxItem = PendingTurn & { submission?: number; privileged?: true;
 
 /**
  * Inputs accepted but not yet confirmed delivered, in arrival order. A channel replays them after a restart
- * (docs/architecture.md §4.4).
+ *.
  */
 export const Outbox = appDoc<{ items: OutboxItem[] }>({
   kind: "app.outbox",

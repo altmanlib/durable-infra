@@ -15,7 +15,7 @@ export class SummaryError extends Error {
 
 export type Summary = { text: string; usage: Usage };
 
-/** Answers a question from one page, so only the answer reaches the main model (docs/design/2026-10-06-model-delegation.md §4.2). */
+/** Answers a question from one page, so only the answer reaches the main model. */
 export interface PageSummarizer {
   /** `document` is the page already wrapped in its `<web_page>` tag. Throws `SummaryError` when no answer comes back. */
   answer(document: string, question: string, signal?: AbortSignal): Promise<Summary>;

@@ -36,7 +36,7 @@ export function repoOf(input: string, baseUrl: string): GiteaRepoRef | undefined
 }
 
 /**
- * The setting `gitea.repo` (docs/design/2026-10-20-gitea-issue.md §4): checked against Gitea when it is set, kept as
+ * The setting `gitea.repo`: checked against Gitea when it is set, kept as
  * Gitea's `owner/name`. Every reason is a fixed text: nothing Gitea answered reaches the model.
  */
 export function giteaRepoSetting(client: GiteaClient, baseUrl: string): SettingSpec<GiteaRepoRef> {

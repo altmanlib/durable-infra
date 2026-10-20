@@ -4,8 +4,7 @@ import { TurnFailed } from "./agent-service.ts";
 import { isEvent, type Notice, type ScheduledEvent } from "./notices.ts";
 
 /**
- * Delivery that every channel needs and that does not depend on how a channel talks to its users (docs/architecture.md
- * §4.4): replaying answers that were never confirmed delivered, and delivering notices that fire without a user input.
+ * Delivery that every channel needs and that does not depend on how a channel talks to its users: replaying answers that were never confirmed delivered, and delivering notices that fire without a user input.
  * A channel says which keys are its own, how to send text to the user behind a key, and its texts; the rules of order,
  * confirmation and retry live here once.
  */
@@ -113,7 +112,7 @@ export type Notices = {
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 5_000, 30_000];
 
 /**
- * Deliver notices such as due reminders (docs/design/2026-10-05-reminder.md): first the ones left unconfirmed by an earlier run,
+ * Deliver notices such as due reminders: first the ones left unconfirmed by an earlier run,
  * then each new one. A notice is confirmed after it was sent, so a crash in between sends it again (at least once).
  * Notices go out one at a time in the order they fired. An event the channel scheduled is handed to `handle` instead of
  * being sent, with the same order, retry and confirmation.

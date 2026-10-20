@@ -44,9 +44,9 @@ export function previewOf(head: string): string {
 }
 
 /**
- * The memo of each conversation, entry by entry (docs/design/2026-10-19-group-memo.md §3.2); a conversation reaches only
+ * The memo of each conversation, entry by entry; a conversation reaches only
  * its own entries, by its key. The limits are checked before writing. A write that fails is not swallowed: it throws,
- * and the caller says it was not kept (docs/persistence.md §6).
+ * and the caller says it was not kept.
  */
 export class MemoEntries {
   readonly #db: Kysely<MemoSchema>;

@@ -6,7 +6,7 @@ export const SETTING_MIGRATIONS: Migrations = {
   "0001_setting": {
     up: (db) =>
       inTransaction(db, [
-        // One row per setting a conversation has (docs/design/2026-10-20-group-settings.md §3.2): no row is "not set".
+        // One row per setting a conversation has: no row is "not set".
         // Rows are short, so the key is the table (without rowid), and listing a conversation's settings walks it.
         sql`create table conversation_setting (
           conversation_key text not null,

@@ -37,7 +37,7 @@ export function giteaConfigFromEnv(env: Record<string, string | undefined>): Git
 }
 
 /**
- * Filing an issue on the Gitea of a group (docs/design/2026-10-20-gitea-issue.md): the setting `gitea.repo` and the
+ * Filing an issue on the Gitea of a group: the setting `gitea.repo` and the
  * tool that uses it. An application that has no Gitea does not list the module.
  */
 export function giteaModule(config: GiteaConfig): Module {

@@ -8,7 +8,7 @@ import { formatLocal } from "../../platform/local-time.ts";
 import { log } from "../../platform/log.ts";
 
 /**
- * The settings of a group (docs/design/2026-10-20-group-settings.md §5): everyone may look, only the privileged may
+ * The settings of a group: everyone may look, only the privileged may
  * change them (`set_setting` and `clear_setting` are privileged tools). Deferred, like the memo's, so only shared
  * conversations are offered them; installed only when some setting is registered.
  */

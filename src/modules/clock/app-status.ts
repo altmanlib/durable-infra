@@ -5,7 +5,7 @@ import { formatLocal } from "../../platform/local-time.ts";
 
 /**
  * Facts about the running application: its version, when it started and for how long it has run
- * (docs/design/2026-10-13-app-status-tool.md). Only facts that are safe to show every user belong here; check §5 of the
+ *. Only facts that are safe to show every user belong here; check §5 of the
  * design before adding one. Read-only, so an interrupted call may simply run again and report the new process.
  */
 export function createAppStatusTool(deps: Pick<BaseDeps, "now" | "prompts" | "startedAt" | "version">) {

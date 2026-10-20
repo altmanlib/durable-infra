@@ -1,5 +1,5 @@
 /**
- * The service log on disk (docs/design/2026-10-07-logging.md): every line also goes to `<dir>/app.log`, written synchronously,
+ * The service log on disk: every line also goes to `<dir>/app.log`, written synchronously,
  * rotated by size into `app.1.log` … so the total stays bounded. A failing disk never reaches the caller: the file is
  * dropped, reported once on stderr, and reopened after a pause.
  */

@@ -9,7 +9,7 @@ export type SlidingWindowOptions = {
 const DEFAULT_MAX_KEYS = 1000;
 
 /**
- * Events per key in a sliding window, kept in memory (docs/persistence.md §8): a restart gives every key a fresh window,
+ * Events per key in a sliding window, kept in memory: a restart gives every key a fresh window,
  * which is fine for a guard against floods and against guessing. The one place that counts events in a window: the
  * inputs a conversation may start, the failed attempts of an address. Time is given by the caller, so a test can move it.
  */

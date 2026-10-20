@@ -8,7 +8,7 @@ import { log } from "../../platform/log.ts";
 import { MAX_MEMO_BODY_CHARS, MAX_MEMO_ENTRIES, MAX_MEMO_NAME_CHARS, type MemoStore, normalizeMemoName } from "./records/index.ts";
 
 /**
- * The memo of a group: entries kept in the business database, read and written by name (docs/design/2026-10-19-group-memo.md).
+ * The memo of a group: entries kept in the business database, read and written by name.
  * Only shared conversations are offered these tools: they are deferred, so a conversation that has every tool (a private
  * one) is not, while a shared one names them (`sharedAgent`).
  */

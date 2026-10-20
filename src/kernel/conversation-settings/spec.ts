@@ -1,5 +1,5 @@
 /**
- * What a setting is, as the module that uses it registers it (docs/design/2026-10-20-group-settings.md §4). The settings
+ * What a setting is, as the module that uses it registers it. The settings
  * know no setting of their own: every one comes from its user, through `core/open.ts`.
  */
 

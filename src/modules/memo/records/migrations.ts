@@ -6,7 +6,7 @@ export const MEMO_MIGRATIONS: Migrations = {
   "0001_entry": {
     up: (db) =>
       inTransaction(db, [
-        // One row per entry (docs/design/2026-10-19-group-memo.md §3.1); the key is what makes a second write of a name
+        // One row per entry; the key is what makes a second write of a name
         // replace the first. A rowid table: a body may be several kilobytes, too large a row for one without.
         sql`create table memo_entry (
           conversation_key text not null,

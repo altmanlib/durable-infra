@@ -1,5 +1,5 @@
 /**
- * Tools of a conversation several people share, such as a group (docs/design/2026-10-19-group-chat.md §3.8): which tools
+ * Tools of a conversation several people share, such as a group: which tools
  * it has, who may call the privileged ones, and moving conversations made earlier to the current list.
  *
  * A shared conversation is one whose stored `tools` is a list (`configure` with exact registrations); every other

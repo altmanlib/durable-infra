@@ -3,7 +3,7 @@ import { type CheckpointInfo, defineDoc, defineDocFamily, type JsonObject } from
 
 /**
  * The one way the application defines its own Durable documents (`app.*`), so none can leave out when to store a
- * full copy (docs/persistence.md §3).
+ * full copy.
  *
  * Durable stores a document as a full copy (a base) and then each change as a delta; reading it replays every delta
  * since the newest base. A session document drops its older deltas when a new base is stored, and only then: a document

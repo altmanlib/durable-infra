@@ -9,9 +9,9 @@ export type SettingRemoveResult = "cleared" | "missing";
 export type SettingRowsOptions = { now?: () => number };
 
 /**
- * The settings of each conversation, row by row (docs/design/2026-10-20-group-settings.md §3.2); a conversation reaches
+ * The settings of each conversation, row by row; a conversation reaches
  * only its own, by its key. It knows no setting: names and values are checked by the catalog before they get here. A
- * write that fails is not swallowed: it throws, and the caller says it was not kept (docs/persistence.md §6).
+ * write that fails is not swallowed: it throws, and the caller says it was not kept.
  */
 export class SettingRows {
   readonly #db: Kysely<SettingSchema>;

@@ -1,5 +1,5 @@
 /**
- * The bot account's door to Gitea (docs/design/2026-10-20-gitea-issue.md §3.2): two calls, written like the search
+ * The bot account's door to Gitea: two calls, written like the search
  * client (`core/web/tavily.ts`). The token goes only in the request header; redirects are not followed, so it never
  * reaches another address; what Gitea says on a failure is kept as `detail` for the log, never for the model.
  */

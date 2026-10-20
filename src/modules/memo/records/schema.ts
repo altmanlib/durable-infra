@@ -3,7 +3,7 @@
  * migrations (`migrations.ts`); keep the two in step. Nothing outside `core/memo/records` sees these types.
  */
 
-/** One entry of a conversation's memo (docs/design/2026-10-19-group-memo.md §3.1). */
+/** One entry of a conversation's memo. */
 export type EntryTable = {
   /** The conversation's channel key, such as `<channel>:<id>`. */
   conversation_key: string;

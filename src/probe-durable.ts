@@ -252,7 +252,7 @@ try {
   }
 
   // 7b. A tool result's `details`: stored on the toolResult entry, and not part of what the model is sent
-  // (built-in tools put a machine-readable code there, docs/design/2026-10-09-result-codes.md §3).
+  // (built-in tools put a machine-readable code there).
   {
     const coded = defineTool({
       name: "probe_coded",
@@ -413,7 +413,7 @@ try {
     await usageHarness.close(context);
   }
 
-  // 10. What the usage report counts by day (docs/design/2026-10-06-query-api.md): every model response, failed ones too, is an
+  // 10. What the usage report counts by day: every model response, failed ones too, is an
   // assistant entry with timestamp and usage; a tool's own spend is on its toolResult; a compaction summary is in
   // pi.usage but on no entry. Conversations and entries are listed through the storage.
   {

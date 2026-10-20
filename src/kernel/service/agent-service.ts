@@ -168,7 +168,7 @@ export type AgentServiceOptions = {
 const context = BACKGROUND_CONTEXT;
 
 /**
- * Today's date in the process time zone (TZ), without naming the zone (docs/design/2026-10-13-local-time.md). Day
+ * Today's date in the process time zone (TZ), without naming the zone. Day
  * granularity keeps the section stable within a day, so the provider prompt cache is invalidated at most once a day.
  */
 export function currentDateLine(now: Date): string {
@@ -367,7 +367,7 @@ export class AgentService {
 
   /**
    * Keep the model's context to the most recent messages, such as in a group that records everything said
-   * (docs/design/2026-10-19-group-chat.md §3.7). Messages are recorded ones (`chat.message`) and inputs. Over
+   *. Messages are recorded ones (`chat.message`) and inputs. Over
    * `keep + slack` of them in the current context, a Durable write of a `chat.window` entry moves the start (`head`) to
    * the `keep`-th message from the end: always a user message, so a tool call is never parted from its result, and the
    * answers and tool rounds after it stay. Up to `keep + slack` nothing moves, so the provider's prompt cache is broken

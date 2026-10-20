@@ -37,7 +37,7 @@ async function checked<T>(work: (signal: AbortSignal) => T | Promise<T>, ms: num
 }
 
 /**
- * The settings of each conversation (docs/design/2026-10-20-group-settings.md §4): what the catalog registers, kept by
+ * The settings of each conversation: what the catalog registers, kept by
  * the store. The tools list, set and clear them; the features that use one read it with `get`. Storage failures throw.
  */
 export class ConversationSettings {
@@ -73,7 +73,7 @@ export class ConversationSettings {
     });
   }
 
-  /** Check the value, then keep what the check gives back (docs/design/2026-10-20-group-settings.md §4.1). */
+  /** Check the value, then keep what the check gives back. */
   async set(key: string, name: string, input: string, by: string): Promise<SettingSetResult> {
     const spec = this.catalog.get(name.trim());
     if (spec === undefined) return { result: "unknown_setting" };

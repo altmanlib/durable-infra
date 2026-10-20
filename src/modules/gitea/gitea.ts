@@ -10,7 +10,7 @@ import type { GiteaRepoRef } from "./settings.ts";
 import { issueSignature } from "./texts.ts";
 
 /**
- * Filing an issue on the group's Gitea repository (docs/design/2026-10-20-gitea-issue.md §5): open to everyone in a
+ * Filing an issue on the group's Gitea repository: open to everyone in a
  * group for now, deferred so only shared conversations are offered it, installed only when Gitea is configured.
  */
 export const GITEA_CREATE_ISSUE = "gitea_create_issue";

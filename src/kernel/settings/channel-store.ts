@@ -47,7 +47,7 @@ const checkKey = (key: string): string => {
 };
 
 /**
- * The documents of one channel, kept in the same storage as everything else (docs/persistence.md).
+ * The documents of one channel, kept in the same storage as everything else.
  * A channel reaches Durable only through this class, and only its own documents: the kind of every document is built
  * here from the channel and collection names, so one channel cannot name another's. A collection holds documents by
  * key, one document per key. Writes run one at a time with the rest of the settings, and one commit can also add a

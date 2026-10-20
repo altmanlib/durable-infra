@@ -36,7 +36,7 @@ export type Contribution = Pick<Extension, "tools" | "sections" | "tasks">;
 
 /**
  * A feature that an application opens or leaves out: it brings its tools, its texts and, when it needs them, a table and
- * settings, and nothing else in the core knows it (docs/design/2026-10-20-infra-extraction.md §4.3). The modules of an
+ * settings, and nothing else in the core knows it. The modules of an
  * application are listed once, in the order their tools should appear; a module never uses another.
  *
  * Tool names, task names, prompt ids and table names of a module are persistent identifiers: conversations, stored

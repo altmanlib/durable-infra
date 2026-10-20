@@ -3,7 +3,7 @@
  * the migrations (`migrations.ts`); keep the two in step. Nothing outside `core/conversation-settings/records` sees these types.
  */
 
-/** One setting of a conversation (docs/design/2026-10-20-group-settings.md §3.2). */
+/** One setting of a conversation. */
 export type SettingTable = {
   /** The conversation's channel key, such as `<channel>:<id>`. */
   conversation_key: string;

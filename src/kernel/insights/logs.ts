@@ -1,5 +1,5 @@
 /**
- * Reading the service log files for the console (docs/design/2026-10-07-logging.md §8): newest first, an event with its indented
+ * Reading the service log files for the console: newest first, an event with its indented
  * continuation lines, filtered, a page at a time. Files are read backwards in chunks from a position, never whole, and
  * one call scans a bounded number of bytes; `next` says where to go on.
  */

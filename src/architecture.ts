@@ -1,6 +1,5 @@
 /**
- * Who may import what: the layers of docs/design/2026-10-20-infra-extraction.md §4.1 as one table, checked by
- * architecture.test.ts.
+ * Who may import what: the layers of the package as one table, checked by architecture.test.ts.
  *
  * Every source file under src/ belongs to exactly one zone: the zone with the longest path that covers it. A file may
  * import the files of its own zone, and the paths its zone lists in `uses`; nothing else under src/. A zone below

@@ -1,4 +1,4 @@
-// Filing issues on the team's Gitea (docs/design/2026-10-20-gitea-issue.md): the module, and the client, the setting
+// Filing issues on the team's Gitea: the module, and the client, the setting
 // `gitea.repo` and the signature it is made of.
 
 export { GITEA_TIMEOUT_MS, type GiteaClient, GiteaError, type GiteaErrorKind, GiteaHttpClient, type GiteaIssue, type GiteaRepo } from "./client.ts";

@@ -1,4 +1,4 @@
-// The settings of a conversation, such as a group (docs/design/2026-10-20-group-settings.md): the one door for the rest of
+// The settings of a conversation, such as a group: the one door for the rest of
 // core, both for the tools and for the modules that register and read a setting.
 import { SettingCatalog } from "./catalog.ts";
 import { openSettingStore, type SettingTables } from "./records/index.ts";
