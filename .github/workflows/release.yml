@@ -24,7 +24,7 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
       - run: bun install --frozen-lockfile
-      - run: bun run check
+      - run: bun run verify
       - uses: changesets/action@v2
         with:
           publish-script: bun run release

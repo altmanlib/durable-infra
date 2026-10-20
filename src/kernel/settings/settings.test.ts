@@ -105,7 +105,7 @@ test("edits and their history are still there after a restart, and are in force 
     edited: true,
     version: 1,
   });
-  expect(second.settings.changes().items.map((change) => [change.target, change.after])).toEqual([
+  expect((await second.settings.changes()).items.map((change) => [change.target, change.after])).toEqual([
     ["budget.notice", "Stop now."],
     ["system.preamble", "Kept across restarts."],
   ]);
@@ -129,7 +129,7 @@ test("a change made after the caller read is refused with a conflict, writes not
   const staleReset = await fails(settings.resetPrompt("system.preamble", 0));
   expect(staleReset.kind).toBe("conflict");
   expect(settings.listPrompts().find((view) => view.id === "system.preamble")).toMatchObject({ text: "First.", version: 1 });
-  expect(settings.changes().items).toHaveLength(1);
+  expect((await settings.changes()).items).toHaveLength(1);
 });
 
 test("two writers with the same version: one wins, the other gets the conflict", async () => {
@@ -139,7 +139,7 @@ test("two writers with the same version: one wins, the other gets the conflict",
     settings.setPrompt("system.preamble", "B", 0).catch((e: unknown) => e),
   ]);
   expect(results.filter((result) => result instanceof SettingsError && result.kind === "conflict")).toHaveLength(1);
-  expect(settings.changes().items).toHaveLength(1);
+  expect((await settings.changes()).items).toHaveLength(1);
 });
 
 test("unknown, locked, empty and oversized are refused, and nothing is written", async () => {
@@ -151,7 +151,7 @@ test("unknown, locked, empty and oversized are refused, and nothing is written",
   expect((await fails(settings.setPrompt("system.preamble", "   ", 0))).kind).toBe("invalid");
   expect((await fails(settings.setPrompt("system.preamble", "x".repeat(MAX_PROMPT_CHARS + 1), 0))).kind).toBe("invalid");
   await settings.setPrompt("system.preamble", "x".repeat(MAX_PROMPT_CHARS), 0);
-  expect(settings.changes().items).toHaveLength(1);
+  expect((await settings.changes()).items).toHaveLength(1);
 });
 
 test("a text equal to the default is no edit, and saving the same text twice changes nothing", async () => {
@@ -163,7 +163,7 @@ test("a text equal to the default is no edit, and saving the same text twice cha
   expect(again).toMatchObject({ edited: true, version: 1 });
   const resetDefault = await settings.resetPrompt("system.no-tools", 0);
   expect(resetDefault).toMatchObject({ edited: false, version: 0 });
-  expect(settings.changes().items).toHaveLength(1);
+  expect((await settings.changes()).items).toHaveLength(1);
 });
 
 test("the history says who changed what: newest first, with before and after, null being the default", async () => {
@@ -176,7 +176,7 @@ test("the history says who changed what: newest first, with before and after, nu
   await settings.setPrompt("system.preamble", "One.", 0);
   await settings.setPrompt("system.preamble", "Two.", 1);
   await settings.resetPrompt("system.preamble", 2);
-  const { items } = settings.changes();
+  const { items } = await settings.changes();
   expect(items.map(({ seq, at, area, target, before, after }) => ({ seq, at, area, target, before, after }))).toEqual([
     { seq: 3, at: 4_000, area: "prompt", target: "system.preamble", before: "Two.", after: null },
     { seq: 2, at: 3_000, area: "prompt", target: "system.preamble", before: "One.", after: "Two." },
@@ -187,15 +187,15 @@ test("the history says who changed what: newest first, with before and after, nu
 test("the history is paged from the newest, and capped at the newest MAX_CHANGES", async () => {
   const { settings } = await open("pages");
   for (let index = 0; index < 5; index++) await settings.setPrompt("budget.notice", `v${index}`, index);
-  const first = settings.changes({ limit: 2 });
+  const first = await settings.changes({ limit: 2 });
   expect(first.items.map((change) => change.after)).toEqual(["v4", "v3"]);
-  const second = settings.changes({ limit: 2, before: first.next });
+  const second = await settings.changes({ limit: 2, before: first.next });
   expect(second.items.map((change) => change.after)).toEqual(["v2", "v1"]);
-  const last = settings.changes({ limit: 2, before: second.next });
+  const last = await settings.changes({ limit: 2, before: second.next });
   expect(last.items.map((change) => change.after)).toEqual(["v0"]);
   expect(last.next).toBeUndefined();
-  expect(settings.changes({ limit: 0 }).items).toHaveLength(1);
-  expect(settings.changes({ limit: 9999 }).items).toHaveLength(5);
+  expect((await settings.changes({ limit: 0 })).items).toHaveLength(1);
+  expect((await settings.changes({ limit: 9999 })).items).toHaveLength(5);
   expect(MAX_CHANGES).toBeGreaterThan(5);
 });
 
@@ -212,13 +212,13 @@ test("a change is logged by id and size, never by its text", async () => {
 test("the history keeps only the newest changes, and the sequence numbers keep counting", async () => {
   const { settings } = await open("capped", { maxSettingsChanges: 3 });
   for (let index = 0; index < 5; index++) await settings.setPrompt("budget.notice", `v${index}`, index);
-  expect(settings.changes().items.map((change) => [change.seq, change.after])).toEqual([
+  expect((await settings.changes()).items.map((change) => [change.seq, change.after])).toEqual([
     [5, "v4"],
     [4, "v3"],
     [3, "v2"],
   ]);
   await settings.setPrompt("budget.notice", "v5", 5);
-  expect(settings.changes().items.map((change) => change.seq)).toEqual([6, 5, 4]);
+  expect((await settings.changes()).items.map((change) => change.seq)).toEqual([6, 5, 4]);
 });
 
 test("writes made at once to different prompts all show afterwards, and are all in force", async () => {

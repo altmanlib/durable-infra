@@ -31,7 +31,7 @@ test("the first start stores the configured users as the list, and says so in th
   expect(access.allows("2002")).toBe(true);
   expect(access.allows(3003)).toBe(false);
   expect(settings.access.list().channels).toEqual([{ channel: "feishu", userIds: ["1001", "2002"], version: 1 }]);
-  expect(settings.changes().items.map(({ area, target, before, after }) => ({ area, target, before, after }))).toEqual([
+  expect((await settings.changes()).items.map(({ area, target, before, after }) => ({ area, target, before, after }))).toEqual([
     { area: "allowlist", target: "feishu", before: null, after: "1001,2002" },
   ]);
 });
@@ -82,7 +82,7 @@ test("a change takes effect for the very next message, and is in the history nex
   expect(access.allows(2002)).toBe(true);
   await settings.access.set("feishu", ["2002"], 2);
   expect(access.allows(1001)).toBe(false);
-  expect(settings.changes().items.map(({ area, target, before, after }) => [area, target, before, after])).toEqual([
+  expect((await settings.changes()).items.map(({ area, target, before, after }) => [area, target, before, after])).toEqual([
     ["allowlist", "feishu", "1001,2002", "2002"],
     ["allowlist", "feishu", "1001", "1001,2002"],
     ["prompt", "system.preamble", null, "Terse."],
@@ -101,7 +101,7 @@ test("the list never goes empty, takes only valid IDs, knows only channels that 
   await settings.access.set("feishu", ["1001", "2002"], 1);
   expect((await fails(settings.access.set("feishu", ["3003"], 1))).kind).toBe("conflict");
   expect(settings.access.list().channels[0]).toMatchObject({ userIds: ["1001", "2002"], version: 2 });
-  expect(settings.changes().items).toHaveLength(2);
+  expect((await settings.changes()).items).toHaveLength(2);
 });
 
 test("saving the same list again changes nothing and leaves no history", async () => {
@@ -109,7 +109,7 @@ test("saving the same list again changes nothing and leaves no history", async (
   await settings.access.open("feishu", [1001, 2002]);
   const same = await settings.access.set("feishu", ["2002", "1001"], 1);
   expect(same.version).toBe(1);
-  expect(settings.changes().items).toHaveLength(1);
+  expect((await settings.changes()).items).toHaveLength(1);
 });
 
 test("two writers with the same version: one wins, the other gets the conflict", async () => {

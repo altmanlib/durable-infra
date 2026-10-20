@@ -1,5 +1,10 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
-import type { ConversationId, Cursor, EntryRecord, Harness, Storage, UsageState } from "@earendil-works/pi-durable";
+import { type ConversationId, type Cursor, type EntryRecord, type Harness, LiveDoc, type Storage, UsageDoc, type UsageState } from "@earendil-works/pi-durable";
+import type { ConversationInfo } from "./agent-service.ts";
+import { ChannelMap } from "./channel-map.ts";
+import { ConversationKeys } from "./notices.ts";
+import { Outbox, type PendingTurn } from "./outbox.ts";
+import { TIMERS_KEY } from "./timers.ts";
 
 const context = BACKGROUND_CONTEXT;
 const PAGE = 200;
@@ -59,5 +64,57 @@ export class SessionReader {
   /** Spend Durable has counted across every conversation, including what no entry carries. */
   usage(): Promise<UsageState> {
     return this.#harness.usage(context);
+  }
+
+  /** The channel key a conversation was created for, or undefined for one without (a fork, say). */
+  async keyOf(conversationId: ConversationId): Promise<string | undefined> {
+    const key = (await this.#harness.snapshot(ConversationKeys, String(conversationId), context))?.key;
+    return key === undefined || key === "" ? undefined : key;
+  }
+
+  /** The conversation a channel key currently points at; a conversation whose key points at a newer one is stale. */
+  async conversationOf(key: string): Promise<number | undefined> {
+    return (await this.#harness.snapshot(ChannelMap, key, context))?.conversationId;
+  }
+
+  /** Inputs accepted but not yet confirmed delivered, in arrival order. */
+  async pendingInputs(): Promise<PendingTurn[]> {
+    return (await this.#harness.snapshot(Outbox, context))?.items ?? [];
+  }
+
+  /** Whether an answer is being written or inputs are waiting. */
+  async isBusy(conversationId: ConversationId): Promise<boolean> {
+    return (await this.#harness.snapshot(LiveDoc, conversationId, context))?.run !== undefined;
+  }
+
+  /** Spend Durable has counted for this conversation alone, including what no entry carries. */
+  async spent(conversationId: ConversationId): Promise<UsageState | undefined> {
+    return this.#harness.snapshot(UsageDoc, conversationId, context);
+  }
+
+  /**
+   * Every conversation that has a channel key, most recently active first. Forks and conversations whose key now points
+   * at a newer one (a stale mapping) are left out: they cannot be addressed by key.
+   */
+  async listConversations(): Promise<ConversationInfo[]> {
+    const pending = await this.pendingInputs();
+    const found: ConversationInfo[] = [];
+    for await (const id of this.conversations()) {
+      const key = await this.keyOf(id);
+      // The conversation that owns the scheduled tasks is not a chat.
+      if (!key || key === TIMERS_KEY) continue;
+      if ((await this.conversationOf(key)) !== Number(id)) continue;
+      const spent = await this.spent(id);
+      const totalTokens = [...Object.values(spent?.models ?? {}), ...Object.values(spent?.tools ?? {})].reduce((sum, each) => sum + (each.totalTokens ?? 0), 0);
+      const lastActiveAt = await this.lastActivity(id);
+      found.push({
+        key,
+        busy: await this.isBusy(id),
+        ...(lastActiveAt !== undefined ? { lastActiveAt } : {}),
+        totalTokens,
+        pending: pending.filter((item) => item.key === key).length,
+      });
+    }
+    return found.sort((a, b) => (b.lastActiveAt ?? 0) - (a.lastActiveAt ?? 0));
   }
 }

@@ -45,7 +45,7 @@
     "typecheck": "bun check",
     "probe": "bun run src/probe-durable.ts",
     "test": "bun test",
-    "check": "biome check . && bun check && bun test",
+    "verify": "biome check . && bun check && bun test",
     "check:package": "publint",
     "release": "changeset publish"
   },

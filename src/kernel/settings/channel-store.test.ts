@@ -89,7 +89,7 @@ test("a commit that throws changes nothing: not the documents, not the history",
   await store.commit(async (tx) => {
     (await tx.get<Doc>("docs", "u1", fresh)).cursor = "kept";
   });
-  const historyBefore = settings.changes().items.length;
+  const historyBefore = (await settings.changes()).items.length;
 
   const error = await fails(
     store.commit(async (tx) => {
@@ -102,13 +102,13 @@ test("a commit that throws changes nothing: not the documents, not the history",
   expect(error?.message).toBe("no good");
   expect((await store.read<Doc>("docs", "u1"))?.cursor).toBe("kept");
   expect(await store.keys("docs")).toEqual(["u1"]);
-  expect(settings.changes().items.length).toBe(historyBefore);
+  expect((await settings.changes()).items.length).toBe(historyBefore);
 });
 
 test("a line recorded in a commit shows in the history at once, under the channel's name", async () => {
   const { settings } = await open();
   await settings.channel("feishu").commit(async (tx) => tx.record({ target: "groups/1", before: "allowed", after: "banned" }));
-  expect(settings.changes().items[0]).toMatchObject({ area: "channel", target: "feishu/groups/1", before: "allowed", after: "banned" });
+  expect((await settings.changes()).items[0]).toMatchObject({ area: "channel", target: "feishu/groups/1", before: "allowed", after: "banned" });
 });
 
 test("names and keys that could reach another channel or break a document kind are refused", async () => {

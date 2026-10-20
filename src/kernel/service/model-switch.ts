@@ -1,6 +1,7 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { AgentDoc, type ConversationId, configure, type Harness, type ModelRef } from "@earendil-works/pi-durable";
 import { log } from "../../platform/log.ts";
+import type { ChangeLog } from "../settings/change-log.ts";
 import { recordChange } from "../settings/docs.ts";
 import { ConversationKeys } from "./notices.ts";
 
@@ -18,14 +19,14 @@ export function modelName(model: ModelRef): string {
  * left unfinished asks the new model from its next prepared request; one already prepared, sent or being polled resumes
  * with the model it was prepared with. A conversation that already has the model is left alone, so a second open
  * changes nothing. The history gets one entry per previous model (`area: "model"`, `target` the number of conversations
- * moved from it), so a switch does not push the console's edits out of it; the log has a line per conversation. Returns
- * how many were moved.
+ * moved from it), so a switch does not push the console's edits out of it; the log has a line per conversation. With a
+ * `ChangeLog` of the application's own the history is noted there after the commit instead. Returns how many were moved.
  */
 export async function moveToModel(
   harness: Harness,
   conversations: AsyncIterable<ConversationId>,
   model: ModelRef,
-  options: { now: () => number; maxChanges: number },
+  options: { now: () => number; maxChanges: number; changes?: ChangeLog },
 ): Promise<number> {
   const moves: { id: ConversationId; from: string }[] = [];
   for await (const id of conversations) {
@@ -40,10 +41,20 @@ export async function moveToModel(
   const at = options.now();
   await harness.commit(async (tx) => {
     for (const move of moves) await configure(tx, move.id, { model });
+    if (options.changes) return;
     for (const [from, moved] of counts) {
       await recordChange(tx, { at, area: "model", target: String(moved.length), before: from, after: to }, options.maxChanges);
     }
   }, context);
+  if (options.changes) {
+    for (const [from, moved] of counts) {
+      try {
+        await options.changes.record({ at, area: "model", target: String(moved.length), before: from, after: to });
+      } catch (error) {
+        log.error("changes.record_failed", { area: "model", target: String(moved.length) }, error);
+      }
+    }
+  }
   for (const move of moves) {
     const key = (await harness.snapshot(ConversationKeys, String(move.id), context))?.key;
     log.info("agent.model_switched", { conversation: key || `#${move.id}`, from: move.from, to });

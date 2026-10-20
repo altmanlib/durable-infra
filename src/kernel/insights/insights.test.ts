@@ -87,3 +87,41 @@ test("malformed or reversed dates are the caller's mistake", async () => {
   await expect(insights.usage({ from: "2026-13-01" })).rejects.toBeInstanceOf(QueryError);
   await expect(insights.usage({ from: "2026-10-06", to: "2026-10-05" })).rejects.toBeInstanceOf(QueryError);
 });
+
+test("usage of one channel key counts that key's conversations alone, and the keys add up to the whole", async () => {
+  await (await service.send("a", "hello", "r1")).answer;
+  await (await service.send("b", "spend", "r2")).answer;
+  expect(await service.compact("a")).toBe("compacted");
+  const insights = new Insights(service.reader, { timeZone: "UTC" });
+
+  const [a, b, all] = [await insights.usage({}, { key: "a" }), await insights.usage({}, { key: "b" }), await insights.usage()];
+  const sources = (report: typeof a) => report.days.flatMap((day) => day.sources.map((source) => `${source.kind}:${source.name}`));
+  expect(sources(a)).toEqual(["model:faux/test"]);
+  expect(sources(b)).toEqual(["model:faux/test", "tool:spender"]);
+  // The compaction summary was a's: it is a's undated spend and not b's.
+  expect(a.undated?.totalTokens).toBeGreaterThan(0);
+  expect(b.undated?.totalTokens).toBe(0);
+  expect(a.total.totalTokens + b.total.totalTokens).toBe(all.total.totalTokens);
+});
+
+test("usage of a key with no conversation is an empty report", async () => {
+  await (await service.send("a", "hello", "r1")).answer;
+  const report = await new Insights(service.reader, { timeZone: "UTC" }).usage({}, { key: "nobody" });
+  expect(report.days).toEqual([]);
+  expect(report.total.totalTokens).toBe(0);
+});
+
+test("the empty key names no conversation: it asks for nothing, not for everything", async () => {
+  await (await service.send("a", "hello", "r1")).answer;
+  const report = await new Insights(service.reader, { timeZone: "UTC" }).usage({}, { key: "" });
+  expect(report.days).toEqual([]);
+  expect(report.total.totalTokens).toBe(0);
+});
+
+test("the conversations are listed by key, most recent first, and are the same as the service lists", async () => {
+  await (await service.send("a", "hello", "r1")).answer;
+  await (await service.send("b", "hello", "r2")).answer;
+  const listed = await new Insights(service.reader).conversations();
+  expect(listed.map((info) => info.key).sort()).toEqual(["a", "b"]);
+  expect(listed).toEqual(await service.conversations());
+});

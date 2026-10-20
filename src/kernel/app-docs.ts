@@ -31,16 +31,30 @@ export const checkpoint = {
       value.items.length === 0 || info.deltasSinceBase + 1 >= changes,
 };
 
-type AppDoc<T> = { kind: `app.${string}`; version: number; checkpoint: Checkpoint<T> };
+/** `migrate` converts a value stored at an older `version` when it is read; without it an older stored version throws. */
+type AppDoc<T> = {
+  kind: `app.${string}`;
+  version: number;
+  checkpoint: Checkpoint<T>;
+  migrate?: (value: JsonObject, fromVersion: number) => T;
+};
 
 /** One document for the whole application (session scope). */
 export function appDoc<T extends JsonObject>(definition: AppDoc<T> & { initial: () => T }) {
-  const { kind, version, initial, checkpoint: when } = definition;
-  return defineDoc<T>({ kind, version, scope: "session", initial, checkpointWhen: (value, _ops, info) => when(value, info) });
+  const { kind, version, initial, migrate, checkpoint: when } = definition;
+  return defineDoc<T>({ kind, version, scope: "session", initial, migrate, checkpointWhen: (value, _ops, info) => when(value, info) });
 }
 
 /** A family of documents for the whole application, one per key (session scope). */
 export function appDocFamily<T extends JsonObject, I extends JsonValue>(definition: AppDoc<T> & { initial: (seed: I) => T }) {
-  const { kind, version, initial, checkpoint: when } = definition;
-  return defineDocFamily<T, I>({ kind, version, scope: "session", family: true, initial, checkpointWhen: (value, _ops, info) => when(value, info) });
+  const { kind, version, initial, migrate, checkpoint: when } = definition;
+  return defineDocFamily<T, I>({
+    kind,
+    version,
+    scope: "session",
+    family: true,
+    initial,
+    migrate,
+    checkpointWhen: (value, _ops, info) => when(value, info),
+  });
 }

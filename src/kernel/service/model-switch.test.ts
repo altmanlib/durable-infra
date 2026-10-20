@@ -52,7 +52,7 @@ test("a conversation created with one model answers with the configured one afte
   faux.setResponses([answeredBy()]);
   expect(await (await (service as AgentService).send("feishu:1", "again", "feishu:1-r2")).answer).toBe("new");
   // One history entry for the whole switch, however many conversations it moved.
-  expect((service as AgentService).settings.changes().items).toMatchObject([{ area: "model", target: "2", before: "faux/old", after: "faux/new" }]);
+  expect((await (service as AgentService).settings.changes()).items).toMatchObject([{ area: "model", target: "2", before: "faux/old", after: "faux/new" }]);
 });
 
 test("the conversation that owns the scheduled tasks is moved and counted too", async () => {
@@ -67,7 +67,7 @@ test("the conversation that owns the scheduled tasks is moved and counted too", 
     service = await open(NEW);
   });
   expect(switched(lines).some((entry) => entry.line.includes(`conversation=${TIMERS_KEY}`))).toBe(true);
-  expect((service as AgentService).settings.changes().items).toMatchObject([{ area: "model", target: "2" }]);
+  expect((await (service as AgentService).settings.changes()).items).toMatchObject([{ area: "model", target: "2" }]);
 });
 
 test("opening again with the same model changes nothing", async () => {
@@ -80,10 +80,10 @@ test("opening again with the same model changes nothing", async () => {
     service = await open(NEW);
   });
   expect(switched(lines)).toEqual([]);
-  expect((service as AgentService).settings.changes().items).toHaveLength(1);
+  expect((await (service as AgentService).settings.changes()).items).toHaveLength(1);
 });
 
 test("a service that never changed its model records nothing", async () => {
   await talk(OLD, ["feishu:1"]);
-  expect((await open(OLD)).settings.changes().items).toEqual([]);
+  expect((await (await open(OLD)).settings.changes()).items).toEqual([]);
 });

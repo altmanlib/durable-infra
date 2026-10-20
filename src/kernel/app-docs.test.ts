@@ -8,7 +8,7 @@ import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite
 import { fauxSetup, tempDirPerTest } from "../testing/testing.ts";
 import { AgentService } from "./index.ts";
 
-// durable-bot R077: a document without a checkpoint keeps every change it ever had, and a read after a restart replays them all.
+// A document without a checkpoint keeps every change it ever had, and a read after a restart replays them all.
 
 const { faux, models, model } = fauxSetup();
 const dir = tempDirPerTest("app-docs-");

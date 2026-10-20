@@ -724,6 +724,84 @@ try {
     );
   }
 
+  // 14. Changing a document's shape (R131): the stored version is compared with the definition's. Older with `migrate`:
+  // the value is converted when read (family members too), and a commit stores it at the new version. Older without
+  // `migrate`, or newer than the definition: the read throws, so old code never writes a newer store.
+  {
+    const path = join(dir, "migrate.sqlite");
+    const open = async () => Harness.open(await openNodeSqliteStorage(path), { models, registry: createRegistry(), settings }, context);
+    type V1 = { name: string };
+    type V2 = { first: string; last: string };
+    const single1 = defineDoc<V1>({ kind: "app.probe-shape", version: 1, scope: "session", initial: () => ({ name: "" }) });
+    const family1 = defineDocFamily<V1, string>({ kind: "app.probe-shapes", version: 1, scope: "session", family: true, initial: (name) => ({ name }) });
+    const split = (value: V1 | Record<string, unknown>): V2 => {
+      const [first = "", last = ""] = String((value as V1).name).split(" ");
+      return { first, last };
+    };
+    const single2 = defineDoc<V2>({
+      kind: "app.probe-shape",
+      version: 2,
+      scope: "session",
+      initial: () => ({ first: "", last: "" }),
+      migrate: (value) => split(value),
+    });
+    const family2 = defineDocFamily<V2, string>({
+      kind: "app.probe-shapes",
+      version: 2,
+      scope: "session",
+      family: true,
+      initial: () => ({ first: "", last: "" }),
+      migrate: (value) => split(value),
+    });
+    const single2Bare = defineDoc<V2>({ kind: "app.probe-shape", version: 2, scope: "session", initial: () => ({ first: "", last: "" }) });
+    const throws = async (run: () => Promise<unknown>) => {
+      try {
+        await run();
+        return false;
+      } catch {
+        return true;
+      }
+    };
+    /** The stored version of the singleton's current revision. */
+    const storedVersion = async (kind: string) => {
+      const storage = await openNodeSqliteStorage(path);
+      const page = await storage.scanDocuments({ scope: { kind: "session" }, at: "current", kind }, 1, undefined, context);
+      const stored = page.items[0] ? await storage.document(page.items[0].id, "current", context) : undefined;
+      await storage.close(context);
+      return stored?.version;
+    };
+
+    let opened = await open();
+    await opened.commit(async (tx) => {
+      (await tx.doc(single1)).name = "Ada Lovelace";
+      await tx.doc(family1, "k", "Grace Hopper");
+    }, context);
+    await opened.close(context);
+
+    opened = await open();
+    const bareFails = await throws(() => opened.snapshot(single2Bare, context));
+    check("an older stored version without migrate throws on read", bareFails);
+    const migrated = await opened.snapshot(single2, context);
+    const migratedMember = await opened.snapshot(family2, "k", context);
+    check(
+      "migrate converts a singleton and a family member when read",
+      migrated?.first === "Ada" && migrated.last === "Lovelace" && migratedMember?.first === "Grace" && migratedMember.last === "Hopper",
+      JSON.stringify([migrated, migratedMember]),
+    );
+    check("reading alone leaves the stored version at 1", (await storedVersion("app.probe-shape")) === 1);
+    await opened.commit(async (tx) => {
+      (await tx.doc(single2)).last = "King";
+    }, context);
+    await opened.close(context);
+    check("a commit stores the migrated document at version 2", (await storedVersion("app.probe-shape")) === 2, String(await storedVersion("app.probe-shape")));
+
+    opened = await open();
+    const afterReopen = await opened.snapshot(single2, context);
+    check("the migrated and edited value survives reopen", afterReopen?.first === "Ada" && afterReopen.last === "King", JSON.stringify(afterReopen));
+    check("old code cannot read a document stored at a newer version", await throws(() => opened.snapshot(single1, context)));
+    await opened.close(context);
+  }
+
   await harness.close(context);
 } finally {
   rmSync(dir, { recursive: true, force: true });

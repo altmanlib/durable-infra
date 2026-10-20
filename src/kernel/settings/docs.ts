@@ -1,4 +1,7 @@
 import { appDoc, checkpoint } from "../app-docs.ts";
+import type { Change } from "./change-log.ts";
+
+export type { Change } from "./change-log.ts";
 
 /**
  * Edited prompt texts by catalog id, with a counter per id that every write moves forward (a reset too), so a console
@@ -21,23 +24,6 @@ export const AllowlistDoc = appDoc<{ channels: Record<string, string[]>; version
   initial: () => ({ channels: {}, versions: {} }),
   checkpoint: checkpoint.every(50),
 });
-
-/**
- * One change made from the console. For a prompt, `before` and `after` are texts and null is the built-in default. For
- * an allowlist, `target` is the channel and they are the user IDs, comma-separated; null is no list (the very first). For
- * an action on a conversation, `target` is its key, `before` is null and `after` names the action (reset, compact, abort).
- * A channel's own change (`channel`) has the channel name and a name of its choosing in `target`, as `<channel>/<name>`.
- * Conversations moved to the configured model at open (`model`) have how many moved in `target`, and `before` and
- * `after` are the models as `<provider>/<modelId>`.
- */
-export type Change = {
-  seq: number;
-  at: number;
-  area: "prompt" | "allowlist" | "conversation" | "channel" | "model";
-  target: string;
-  before: string | null;
-  after: string | null;
-};
 
 /** What was changed, oldest first, newest last; the oldest are dropped past the cap. */
 export const Changes = appDoc<{ items: Change[] }>({

@@ -16,16 +16,16 @@ import {
   type Registry,
   section,
   type TaskId,
-  UsageDoc,
   UserEntry,
 } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
 import { log } from "../../platform/log.ts";
 import { SlidingWindow } from "../../platform/sliding-window.ts";
-import { appDocFamily, checkpoint } from "../app-docs.ts";
 import { EditablePrompts, KERNEL_PROMPTS, PromptCatalog } from "../prompts.ts";
+import type { ChangeLog } from "../settings/change-log.ts";
 import { MAX_CHANGES } from "../settings/docs.ts";
 import { Settings } from "../settings/settings.ts";
+import { ChannelMap } from "./channel-map.ts";
 import type { AgentExtension, ExtensionHost } from "./host.ts";
 import { moveToModel } from "./model-switch.ts";
 import { ConversationKeys, type Notice, NoticeFeed, type ScheduledEvent } from "./notices.ts";
@@ -146,8 +146,14 @@ export type AgentServiceOptions = {
    * tools, the channels' welcomes) must be given the same instance, as `openCore` does.
    */
   prompts?: EditablePrompts;
-  /** How many console changes the history keeps; the settings default when absent. */
+  /** How many console changes the history keeps; the settings default when absent. Not used with `changes`. */
   maxSettingsChanges?: number;
+  /**
+   * Where the application keeps the history of changes (its business database, say). By default the history is a Durable
+   * document written in the commit of each change; with this the change is noted here after its commit, and the
+   * allowlist and `Settings.channel` are not available (kernel/settings/settings.ts).
+   */
+  changes?: ChangeLog;
   /** Flood guard per conversation; inputs over it are refused with `TurnFailed("rate_limited")`. Default 30 per 5 minutes. */
   rateLimit?: RateLimit;
   /** Tool rounds one turn may take before the model is asked to answer without more tools. Default 10. */
@@ -169,14 +175,6 @@ export type AgentServiceOptions = {
 };
 
 const context = BACKGROUND_CONTEXT;
-
-/** Session-scoped map from conversation key to conversation ID, written in the same commit that creates the conversation. */
-const ChannelMap = appDocFamily<{ conversationId: number }, number>({
-  kind: "app.channel",
-  version: 1,
-  initial: (conversationId) => ({ conversationId }),
-  checkpoint: checkpoint.every(50),
-});
 
 /**
  * Today's date in the process time zone (TZ), without naming the zone (docs/design/2026-10-13-local-time.md). Day
@@ -263,6 +261,7 @@ export class AgentService {
     await moveToModel(harness, reader.conversations(), options.model, {
       now: () => (options.now?.() ?? new Date()).getTime(),
       maxChanges: options.maxSettingsChanges ?? MAX_CHANGES,
+      ...(options.changes ? { changes: options.changes } : {}),
     });
     const sharedNames = AgentService.#sharedNames(options);
     if (sharedNames) await moveToSharedTools(harness, reader.conversations(), sharedToolsOf(registry.snapshot(), sharedNames));
@@ -271,6 +270,7 @@ export class AgentService {
       prompts,
       now: () => (options.now?.() ?? new Date()).getTime(),
       maxChanges: options.maxSettingsChanges,
+      ...(options.changes ? { changes: options.changes } : {}),
     });
     harness.resume();
     const service = new AgentService(harness, options, notices, reader, settings);
@@ -508,30 +508,8 @@ export class AgentService {
    * Every conversation that has a channel key, most recently active first. Forks and conversations whose key now points
    * at a newer one (a stale mapping) are left out: they cannot be addressed by key.
    */
-  async conversations(): Promise<ConversationInfo[]> {
-    const outbox = await this.#harness.snapshot(Outbox, context);
-    const found: ConversationInfo[] = [];
-    for await (const id of this.reader.conversations()) {
-      const key = (await this.#harness.snapshot(ConversationKeys, String(id), context))?.key;
-      // The conversation that owns the scheduled tasks is not a chat.
-      if (!key || key === TIMERS_KEY) continue;
-      if ((await this.#harness.snapshot(ChannelMap, key, context))?.conversationId !== Number(id)) continue;
-      const live = await this.#harness.snapshot(LiveDoc, id, context);
-      const usage = await this.#harness.snapshot(UsageDoc, id, context);
-      const totalTokens = [...Object.values(usage?.models ?? {}), ...Object.values(usage?.tools ?? {})].reduce(
-        (sum, spent) => sum + (spent.totalTokens ?? 0),
-        0,
-      );
-      const lastActiveAt = await this.reader.lastActivity(id);
-      found.push({
-        key,
-        busy: live?.run !== undefined,
-        ...(lastActiveAt !== undefined ? { lastActiveAt } : {}),
-        totalTokens,
-        pending: (outbox?.items ?? []).filter((item) => item.key === key).length,
-      });
-    }
-    return found.sort((a, b) => (b.lastActiveAt ?? 0) - (a.lastActiveAt ?? 0));
+  conversations(): Promise<ConversationInfo[]> {
+    return this.reader.listConversations();
   }
 
   /** Withdraw queued inputs and stop the running answer. */
