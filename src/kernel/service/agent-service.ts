@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { AssistantMessage, Models, ModelThinkingLevel, UserMessage } from "@earendil-works/pi-ai";
 import {
+  AgentDoc,
   AssistantEntry,
   type Conversation,
   type ConversationId,
@@ -27,7 +28,7 @@ import { MAX_CHANGES } from "../settings/docs.ts";
 import { Settings } from "../settings/settings.ts";
 import { ChannelMap } from "./channel-map.ts";
 import type { AgentExtension, ExtensionHost } from "./host.ts";
-import { moveToModel } from "./model-switch.ts";
+import { checkCatalog, modelName, moveToModel, type SetModelResult, sameModel, selectModel } from "./model-switch.ts";
 import { ConversationKeys, type Notice, NoticeFeed, type ScheduledEvent } from "./notices.ts";
 import { Outbox, type PendingTurn } from "./outbox.ts";
 import { DEFAULT_RATE_LIMIT, type RateLimit } from "./rate-limit.ts";
@@ -79,6 +80,11 @@ export type CompactOutcome = "compacted" | "skipped";
 /** Which conversation keys a channel answers for; it replays and delivers only those. */
 export type OwnsKey = (key: ConversationKey) => boolean;
 
+export type { SetModelResult };
+
+/** What a channel or console uses to show and change the model of a conversation; a person's choice, never the model's. */
+export type ModelService = Pick<AgentService, "models" | "modelOf" | "setModel">;
+
 /**
  * Everything a channel uses of the conversations: answering, its commands, replaying after a restart, and notices. A
  * channel takes this, never the whole service; a part of a channel takes a smaller Pick of it.
@@ -123,8 +129,16 @@ export type { PendingTurn };
 export type AgentServiceOptions = {
   databasePath: string;
   models: Models;
-  /** Model of every conversation: new ones are created with it, and existing ones are moved to it at open (`moveToModel`). */
+  /**
+   * The default model: new conversations are created with it, and conversations on a model outside `catalog` are moved to
+   * it at open (`moveToModel`).
+   */
   model: ModelRef;
+  /**
+   * The models a conversation may be moved between with `setModel`. All share the default's provider and are known to
+   * `models`, and it holds the default; open throws otherwise. Default: just the default model.
+   */
+  catalog?: readonly ModelRef[];
   thinkingLevel?: ModelThinkingLevel;
   settings?: HarnessSettings;
   /**
@@ -241,6 +255,8 @@ export class AgentService {
         ],
       }),
     );
+    // Before anything is opened or written.
+    const catalog = checkCatalog(options.models, options.model, options.catalog);
     const storage = await openNodeSqliteStorage(options.databasePath);
     const harness = await Harness.open(storage, { models: options.models, registry, settings: options.settings }, context);
     // Installed before the scheduler starts, so tasks left by an earlier run find their code.
@@ -252,6 +268,7 @@ export class AgentService {
     await moveToModel(harness, reader.conversations(), options.model, {
       now: () => (options.now?.() ?? new Date()).getTime(),
       maxChanges: options.maxSettingsChanges ?? MAX_CHANGES,
+      catalog,
       ...(options.changes ? { changes: options.changes } : {}),
     });
     const sharedNames = AgentService.#sharedNames(options);
@@ -460,6 +477,41 @@ export class AgentService {
     const task = Number.isSafeInteger(taskId) ? await this.#harness.getTask(taskId, context) : undefined;
     if (task?.kind !== TIMER_TASK) return "gone";
     return (await this.#harness.abortTask(taskId, context)) === "marked" ? "cancelled" : "gone";
+  }
+
+  /** The models `setModel` accepts; the default model is one of them. */
+  models(): readonly ModelRef[] {
+    return checkCatalog(this.#options.models, this.#options.model, this.#options.catalog);
+  }
+
+  /** The model the conversation of `key` asks next; the default model when it has none yet. */
+  async modelOf(key: ConversationKey): Promise<ModelRef> {
+    const conversation = await this.#find(key);
+    const stored = conversation && (await this.#harness.snapshot(AgentDoc, conversation.id, context))?.model;
+    return stored ?? this.#options.model;
+  }
+
+  /**
+   * Move the conversation of `key` to a model of the catalog, such as when a person asks for it; who may is the caller's
+   * to decide. It applies from the next request: a run in flight finishes on the model it was prepared with. A context
+   * larger than the new model's window is compacted by Durable before the next answer. `unknown_model` when `model` is not
+   * in the catalog (nothing is written), `unchanged` when the conversation already has it. A conversation that does not
+   * exist yet is created, `shared` as on `send`. The change is recorded in the history as area `conversation-model`.
+   */
+  async setModel(key: ConversationKey, model: ModelRef, options: { shared?: boolean } = {}): Promise<SetModelResult> {
+    const wanted = this.models().find((entry) => sameModel(entry, model));
+    if (!wanted) return "unknown_model";
+    const conversation = await this.#obtain(key, options.shared);
+    const { from, moved } = await selectModel(this.#harness, conversation.id, wanted);
+    if (!moved) return "unchanged";
+    // Committed first, noted after: a failure of the note leaves the move standing.
+    try {
+      await this.settings.recordModelChange(key, from ? modelName(from) : null, modelName(wanted));
+    } catch (error) {
+      log.error("changes.record_failed", { area: "conversation-model", target: key }, error);
+    }
+    log.info("agent.model_set", { conversation: key, from: from ? modelName(from) : "none", to: modelName(wanted) });
+    return "saved";
   }
 
   /** Start a new model context, optionally carrying a handoff note. Older entries stay in storage. */

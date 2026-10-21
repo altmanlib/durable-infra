@@ -1,7 +1,7 @@
 // Public surface of the kernel: what an application and its channels use. The log, the counters and the business
 // database are in `./platform`, the features in `./modules/*`, the test fixtures in `./testing`.
 
-export { CLIPROXY_PROVIDER, type CoreConfig, createCliproxyModels, loadCoreConfig } from "./config.ts";
+export { CLIPROXY_PROVIDER, type CoreConfig, createCliproxyModels, type GatewayModel, loadCoreConfig } from "./config.ts";
 export { ConversationSettings, SettingCatalog, type SettingSpec } from "./conversation-settings/index.ts";
 export { Insights, type InsightsOptions, QueryError } from "./insights/insights.ts";
 export { LOG_PAGE_MAX, LOG_TEXT_MAX, type LogEntry, type LogPage, type LogQuery, LogReader } from "./insights/logs.ts";
@@ -28,9 +28,11 @@ export {
   type CompactOutcome,
   type ConversationInfo,
   type ConversationKey,
+  type ModelService,
   type OwnsKey,
   type PendingTurn,
   type SendOptions,
+  type SetModelResult,
   type SharedChannelService,
   type Turn,
   TurnFailed,

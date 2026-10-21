@@ -11,7 +11,7 @@ import { SettingsError } from "./error.ts";
 const context = BACKGROUND_CONTEXT;
 
 /** The areas the kernel writes itself; an application's own must differ. */
-const KERNEL_AREAS: ReadonlySet<string> = new Set(["prompt", "allowlist", "conversation", "channel", "model"]);
+const KERNEL_AREAS: ReadonlySet<string> = new Set(["prompt", "allowlist", "conversation", "channel", "model", "conversation-model"]);
 
 export { type ChannelDoc, ChannelStore, type ChannelTx } from "./channel-store.ts";
 export { SettingsError, type SettingsErrorKind } from "./error.ts";
@@ -255,10 +255,18 @@ export class Settings {
     });
   }
 
+  /** Note in the history that a conversation was moved to another model (`AgentService.setModel`); the move itself is the caller's. */
+  recordModelChange(key: string, before: string | null, after: string): Promise<void> {
+    return this.#serial(async () => {
+      await this.#append({ at: this.#now(), area: "conversation-model", target: key, before, after });
+      log.info("settings.conversation_model", { key, after });
+    });
+  }
+
   /**
    * Note a change of the application's own in the history, such as an operator's change to an account; the change itself is
    * the caller's, made before. `area` names the kind (not one of the kernel's: `prompt`, `allowlist`, `conversation`,
-   * `channel`, `model`), and `target` what it was made to.
+   * `channel`, `model`, `conversation-model`), and `target` what it was made to.
    */
   record(change: { area: string; target: string; before: string | null; after: string | null }): Promise<void> {
     if (change.area === "" || KERNEL_AREAS.has(change.area))

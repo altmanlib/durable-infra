@@ -2,7 +2,7 @@ import type { Models } from "@earendil-works/pi-ai";
 import { defineExtension, type ModelRef } from "@earendil-works/pi-durable";
 import { log } from "../platform/log.ts";
 import { Records } from "../platform/records/records.ts";
-import { CLIPROXY_PROVIDER, type CoreConfig, createCliproxyModels } from "./config.ts";
+import { CLIPROXY_PROVIDER, type CoreConfig, createCliproxyModels, type GatewayModel } from "./config.ts";
 import { openConversationSettings, type SettingSpec } from "./conversation-settings/index.ts";
 import { Insights } from "./insights/insights.ts";
 import { LogReader } from "./insights/logs.ts";
@@ -31,7 +31,7 @@ export type Core = {
 };
 
 /** The service options the core fills in itself; everything else about the service the application may set. */
-type ServiceOptions = Omit<AgentServiceOptions, "databasePath" | "models" | "model" | "prompts" | "extensions" | "sharedTools" | "privilegedTools">;
+type ServiceOptions = Omit<AgentServiceOptions, "databasePath" | "models" | "model" | "catalog" | "prompts" | "extensions" | "sharedTools" | "privilegedTools">;
 
 export type OpenCoreOptions = {
   config: CoreConfig;
@@ -55,8 +55,16 @@ export type OpenCoreOptions = {
    * (see `AgentServiceOptions.changes`).
    */
   changes?: (records: Records) => ChangeLog | Promise<ChangeLog>;
-  /** The models the conversations use, instead of the OpenAI-compatible gateway that `config` describes; for tests and other gateways. */
-  llm?: { models: Models; model: ModelRef };
+  /**
+   * Models of the gateway that `config` describes, besides the configured one, that a conversation can be moved to with
+   * `AgentService.setModel`. Their ids are stored by conversations: never rename a released one. Not used with `llm`.
+   */
+  extraModels?: readonly GatewayModel[];
+  /**
+   * The models the conversations use, instead of the OpenAI-compatible gateway that `config` describes; for tests and other
+   * gateways. `model` is the default; `catalog` lists the models `setModel` accepts (see `AgentServiceOptions.catalog`).
+   */
+  llm?: { models: Models; model: ModelRef; catalog?: readonly ModelRef[] };
   now?: () => Date;
 };
 
@@ -77,8 +85,14 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
   const prompts = new EditablePrompts(catalog);
   const records = await Records.open(config.recordsPath);
   try {
-    const models = options.llm?.models ?? createCliproxyModels(config);
+    const models = options.llm?.models ?? createCliproxyModels(config, options.extraModels);
     const model = options.llm?.model ?? { provider: CLIPROXY_PROVIDER, modelId: config.modelId };
+    const catalog = options.llm
+      ? options.llm.catalog
+      : [
+          model,
+          ...(options.extraModels ?? []).filter((extra) => extra.id !== model.modelId).map((extra) => ({ provider: CLIPROXY_PROVIDER, modelId: extra.id })),
+        ];
     // Before the tools are built, and whether or not a channel starts, so a module always finds its table.
     const specs: SettingSpec<unknown>[] = [];
     for (const module of modules) specs.push(...((await module.prepare?.({ records, prompts, models, model })) ?? []));
@@ -98,6 +112,7 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
       databasePath: config.databasePath,
       models,
       model,
+      ...(catalog ? { catalog } : {}),
       prompts,
       // Without any, a shared conversation has every tool; with them, only these (kernel/service/shared-tools.ts).
       ...(sharedTools.length > 0 || privilegedTools.length > 0 ? { sharedTools, privilegedTools } : {}),

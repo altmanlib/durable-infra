@@ -94,7 +94,7 @@ hands the next what it needs.
    own, with the application's replacements applied; `EditablePrompts` wraps it, and the console's stored
    edits are loaded into it as the storage opens (§8).
 2. **The business database** opens (`Records.open`); it has no tables yet (§9).
-3. **The models** are built — the configured gateway, or the ones the application passes instead.
+3. **The models** are built — the configured gateway with the application's `extraModels`, or the ones the application passes instead (`llm`). The default model and the **catalog** — the models a conversation may be moved between (§7) — are fixed here; the catalog is checked when the service opens.
 4. **Each module prepares**, in the order the application listed it: with the database, the texts and the
    models it opens its tables and registers the conversation settings it owns (`Module.prepare`, §10).
 5. **The conversation settings** open over the collected specs.
@@ -177,7 +177,7 @@ Key files: `src/kernel/service/notices.ts`, `src/kernel/service/delivery.ts`,
 
 ## 7. Conversation governance
 
-Four mechanisms keep a long-lived conversation healthy; all four are the service's, and a channel meets
+Five mechanisms keep a long-lived conversation healthy; all five are the service's, and a channel meets
 them only as behaviour.
 
 - **Compaction.** A conversation's context is summarised before it outgrows the model: the thresholds
@@ -190,11 +190,21 @@ them only as behaviour.
 - **The tool budget.** One turn may take a bounded number of tool rounds (10 by default). When the
   budget is used up, a notice text — an editable prompt (§8) — is appended once, asking the model to wrap
   up with what it has, instead of the turn being cut off mid-work.
-- **The model switch.** At open, every conversation whose stored model is not the configured one is
-  moved to it, in one commit — forks, subagents and the timers conversation included. A run an earlier
-  process left unfinished keeps the model its current request was prepared with and asks the new model
-  from its next prepared request. The switch is idempotent, and the history (§8) gets one entry per
-  previous model, so the console can say what moved.
+- **The model.** The configured model is the default of new conversations; the **catalog** is the set of
+  models a conversation may be on (`openCore`'s `extraModels` or `llm.catalog`; by default just the default).
+  It holds the default, and every entry is known to the models and of the default's provider — history is
+  not carried across providers. A person moves one conversation with `AgentService.setModel` (`modelOf` and
+  `models` read): the choice is a person's, so no tool offers it to the model, and who may choose is the
+  application's to decide. The move is one Durable `configure` and applies from the conversation's next
+  request: a run in flight finishes on the model it was prepared with, and a context larger than the new
+  model's window is compacted before the next answer (both checked by the probe). A model outside the
+  catalog is refused and nothing is written. The history (§8) gets an entry per move, area
+  `conversation-model`, with the key as its target.
+- **The model switch.** At open, every conversation whose stored model is not in the catalog is moved to
+  the default, in one commit — forks, subagents and the timers conversation included. A conversation on
+  another model of the catalog stays. A run an earlier process left unfinished keeps the model its current
+  request was prepared with and asks the new model from its next prepared request. The switch is
+  idempotent, and the history (§8) gets one entry per previous model, so the console can say what moved.
 
 Key files: `src/kernel/service/agent-service.ts` (`compact`, `keepRecent`),
 `src/kernel/service/tool-budget.ts`, `src/kernel/service/model-switch.ts`,
@@ -314,7 +324,7 @@ the conversations' own model, without tools), and its search sits behind the `Se
 module is a client, a setting and the five issue tools, and nothing more.
 
 **Persistent identifiers.** A module's tool names, task names, prompt ids, setting names and table
-names, the `builtin-tools` extension name, conversation keys, and the `kind` of every application
+names, the provider and id of every model in a catalog (conversations store them), the `builtin-tools` extension name, conversation keys, and the `kind` of every application
 document are stored — in conversations, in stored edits, in the database. **Never rename a released
 one.** When a rename is unavoidable, the old name is migrated as the core or the conversation opens
 (the precedent is `moveToSharedTools`, which carried shared conversations over the gitea tool's rename),

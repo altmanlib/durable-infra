@@ -53,9 +53,19 @@ export function loadCoreConfig(dataDir: string, env: Record<string, string | und
   };
 }
 
-/** Models with one OpenAI-compatible provider (the local gateway or any compatible endpoint). */
-export function createCliproxyModels(config: Pick<CoreConfig, "baseUrl" | "apiKey" | "modelId" | "contextWindow" | "maxTokens">): Models {
+/** A model of the gateway besides the configured one; the window and the response limit default to the configured model's. */
+export type GatewayModel = { id: string; contextWindow?: number; maxTokens?: number };
+
+/**
+ * Models with one OpenAI-compatible provider (the local gateway or any compatible endpoint): the configured model and the
+ * `extra` ones, which a conversation can be moved to (`AgentService.setModel`).
+ */
+export function createCliproxyModels(
+  config: Pick<CoreConfig, "baseUrl" | "apiKey" | "modelId" | "contextWindow" | "maxTokens">,
+  extra: readonly GatewayModel[] = [],
+): Models {
   const models = createModels();
+  const all: GatewayModel[] = [{ id: config.modelId }, ...extra.filter((model) => model.id !== config.modelId)];
   models.setProvider(
     createProvider({
       id: CLIPROXY_PROVIDER,
@@ -67,20 +77,18 @@ export function createCliproxyModels(config: Pick<CoreConfig, "baseUrl" | "apiKe
           resolve: async () => ({ auth: { apiKey: config.apiKey }, source: "LLM_API_KEY" }),
         },
       },
-      models: [
-        {
-          id: config.modelId,
-          name: config.modelId,
-          api: "openai-completions",
-          provider: CLIPROXY_PROVIDER,
-          baseUrl: config.baseUrl,
-          reasoning: true,
-          input: ["text"],
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-          contextWindow: config.contextWindow,
-          maxTokens: config.maxTokens,
-        },
-      ],
+      models: all.map((model) => ({
+        id: model.id,
+        name: model.id,
+        api: "openai-completions" as const,
+        provider: CLIPROXY_PROVIDER,
+        baseUrl: config.baseUrl,
+        reasoning: true,
+        input: ["text" as const],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: model.contextWindow ?? config.contextWindow,
+        maxTokens: model.maxTokens ?? config.maxTokens,
+      })),
       api: openAICompletionsApi(),
     }),
   );

@@ -183,3 +183,17 @@ test("an application that keeps the history of changes in its business database 
   expect(kept.map((change) => [change.area, change.target])).toEqual([["conversation", "chan:1"]]);
   expect((await core.settings.changes()).items).toHaveLength(1);
 });
+
+test("the extra models of the gateway are the catalog of setModel, and a model outside it is refused", async () => {
+  core = await openCore({
+    config: loadCoreConfig(dir(), { ...env, PI_DURABLE_MODEL: "base" }),
+    version: "1.2.3",
+    logDir: `${dir()}/logs`,
+    extraModels: [{ id: "big", contextWindow: 1_000_000 }],
+    service: { settings: { retry: { enabled: false } } },
+  });
+  expect(core.agent.models().map((entry) => entry.modelId)).toEqual(["base", "big"]);
+  expect(await core.agent.setModel("gateway:1", { provider: core.agent.models()[1]?.provider ?? "", modelId: "big" })).toBe("saved");
+  expect((await core.agent.modelOf("gateway:1")).modelId).toBe("big");
+  expect(await core.agent.setModel("gateway:1", { provider: "faux", modelId: "base" })).toBe("unknown_model");
+});

@@ -4,7 +4,8 @@
  * comma-separated; null is no list (the very first). For an action on a conversation, `target` is its key, `before` is null
  * and `after` names the action (reset, compact, abort). A channel's own change (`channel`) has the channel name and a name
  * of its choosing in `target`, as `<channel>/<name>`. Conversations moved to the configured model at open (`model`) have
- * how many moved in `target`, and `before` and `after` are the models as `<provider>/<modelId>`.
+ * how many moved in `target`, and `before` and `after` are the models as `<provider>/<modelId>`. A conversation moved to
+ * another model by a person (`conversation-model`) has its key in `target`; `before` is null when it had no model.
  *
  * `area` is a string: the kernel writes the areas above, and an application may write its own through
  * `Settings.record`, such as the changes an operator makes to accounts.
