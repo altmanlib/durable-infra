@@ -348,8 +348,9 @@ package shape.
 
 ## 12. Versioning and upgrading
 
-Releases are changesets: a change that ships carries its changeset, and `changeset publish` is the
-release. Two upgrade rules follow from §2 and §9, and both are about not stranding a running bot:
+A release is a tag: `bun run release` aligns `main` with `dev`, bumps the version and pushes
+`v<version>`, and the Release workflow publishes that tag. Two upgrade rules follow from §2 and §9, and
+both are about not stranding a running bot:
 
 - **The earendil peers move together.** Bump the three pins and this package in one change, run the
   probe, then `verify`. Applications then bump their pins in the same lockstep; an application that

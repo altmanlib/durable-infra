@@ -1,17 +1,15 @@
 name: Release
 
+# A tag `v<version>` pushed by `bun run release` publishes that version.
 on:
   push:
-    branches: [main]
-
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+    tags: ['v*']
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # version commits and tags
-      pull-requests: write # "Version Packages" PR
+      contents: read
       id-token: write # npm Trusted Publishing (OIDC); also enables provenance
     steps:
       - uses: actions/checkout@v7
@@ -24,8 +22,8 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
       - run: bun install --frozen-lockfile
+      - name: The tag is the version
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
       - run: bun run verify
-      - uses: changesets/action@v2
-        with:
-          publish-script: bun run release
-          create-github-releases: false
+      - run: bun run check:package
+      - run: npm publish
