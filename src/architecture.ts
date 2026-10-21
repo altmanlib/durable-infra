@@ -96,6 +96,12 @@ export const ZONES: Zone[] = [
     packages: DURABLE,
   },
   {
+    name: "kernel/tool-catalog.ts",
+    why: "what the modules declare, read without opening anything: it knows the module contract and nothing else of the kernel",
+    uses: ["kernel/module.ts"],
+    testUses: ["kernel", ...KERNEL_TESTS],
+  },
+  {
     name: "kernel/base",
     paths: ["kernel/config.ts", "kernel/prompts.ts", "kernel/app-docs.ts"],
     why: "config.ts, prompts.ts and app-docs.ts are foundations: everything in the kernel may use them, they use nothing else of it",

@@ -283,10 +283,18 @@ assembly of §4.
   one that waits for a reminder's time).
 
 The contributions of all the modules are merged into the one `builtin-tools` extension. A module declares
-which of its tools a shared conversation has (`sharedTools`) and which of them only a privileged asker
-may call (`privilegedTools`); without any declaration, a shared conversation has every tool. Read-only
-modules are shared; a module whose tools change state — reminders are the example — is privileged. A
-module never uses another module; the kernel knows none of them.
+each of its tools once, as a `ToolSpec`, on two independent axes: its **scope** (`everywhere`, or
+`shared-only` for a tool a one-to-one conversation is not offered, which is also `deferred` on the tool)
+and its **access** in a shared conversation (`anyone`, or `privileged` for a tool that changes state —
+reminders are the example). A tool the configuration leaves out is declared `off` with a note, such as
+the search tool without a provider. The names a shared conversation is given are derived from the
+specs (`sharedToolNames`); without any declaration, a shared conversation has every tool. A module never
+uses another module; the kernel knows none of them.
+
+The same declarations are what an operator reads: `describeTools` and `formatToolCatalog`
+(`src/kernel/tool-catalog.ts`) list every tool of an application's modules, for one person and for a
+group, without opening storage or a model. A test builds each module's real contribution and holds it to
+its specs, so the declaration cannot drift from the tools.
 
 The roster today:
 

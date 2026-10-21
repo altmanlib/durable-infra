@@ -18,7 +18,7 @@ export function memoModule(): Module {
   return {
     name: "memo",
     prompts: MEMO_PROMPTS,
-    sharedTools: MEMO_TOOLS,
+    toolSpecs: MEMO_TOOLS.map((name) => ({ name, scope: "shared-only" as const })),
     async prepare({ records }) {
       memos = await openMemoEntries(records);
       return [];

@@ -10,7 +10,7 @@ export function clockModule(): Module {
   return {
     name: "clock",
     prompts: CLOCK_PROMPTS,
-    sharedTools: ["current_time", "app_status"],
+    toolSpecs: [{ name: "current_time" }, { name: "app_status" }],
     contribute: (context) => ({ tools: [createClockTool(context), createAppStatusTool(context)] }),
   };
 }

@@ -37,7 +37,7 @@ export function webModule(options: WebOptions = {}): Module {
   return {
     name: "web",
     prompts: WEB_PROMPTS,
-    sharedTools: [WEB_SEARCH, WEB_FETCH],
+    toolSpecs: [{ name: WEB_FETCH }, search ? { name: WEB_SEARCH } : { name: WEB_SEARCH, off: true, note: "needs a search service: set TAVILY_API_KEY" }],
     async prepare({ models, model, prompts }) {
       // Page answers use the main model until real use shows a separate one is worth configuring.
       summarizer ??= new ModelSummarizer(models, model, prompts);

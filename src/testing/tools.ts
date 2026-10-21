@@ -4,6 +4,7 @@
 import type { ToolRegistration } from "@earendil-works/pi-durable";
 import { BUILTIN_EXTENSION } from "../kernel/open.ts";
 import type { AgentExtension } from "../kernel/service/host.ts";
+import { sharedToolNames } from "../kernel/tool-catalog.ts";
 import { createAppStatusTool } from "../modules/clock/app-status.ts";
 import { createClockTool } from "../modules/clock/clock.ts";
 import { clockModule } from "../modules/clock/index.ts";
@@ -30,21 +31,21 @@ import type { TestDeps } from "./testing.ts";
 
 export type AllDeps = TestDeps;
 
-/** Every module as an application that lists them all would, only for what they declare. */
+/** Every module as an application that lists them all would, only for what they declare; the web module has a search service. */
 const declared = [
   clockModule(),
   reminderModule(),
-  webModule(),
+  webModule({ tavilyApiKey: "unused" }),
   memoModule(),
   settingsToolsModule(),
   giteaModule({ url: "https://git.example.test", token: "unused" }),
 ];
 
 /** The tools every member of a shared conversation may use, by the modules' declarations. */
-export const SHARED_TOOLS: readonly string[] = declared.flatMap((module) => module.sharedTools ?? []);
+export const SHARED_TOOLS: readonly string[] = sharedToolNames(declared).shared;
 
 /** The tools that only a privileged asker may call in a shared conversation. */
-export const PRIVILEGED_TOOLS: readonly string[] = declared.flatMap((module) => module.privilegedTools ?? []);
+export const PRIVILEGED_TOOLS: readonly string[] = sharedToolNames(declared).privileged;
 
 /** In the order `openCore` registers them for a full list of modules. */
 export function builtinTools(deps: AllDeps): ToolRegistration[] {

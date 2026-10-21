@@ -12,6 +12,8 @@ import {
 
 export { SETTINGS_TOOLS_PROMPTS } from "./prompts.ts";
 
+const NEEDS_A_SETTING = "only if a module registers a setting";
+
 /**
  * Tools to look at and change the settings of a conversation (the ones other modules register). Everyone in a shared
  * conversation may look; only a privileged asker may change. With no setting registered there are no tools.
@@ -20,8 +22,11 @@ export function settingsToolsModule(): Module {
   return {
     name: "settings-tools",
     prompts: SETTINGS_TOOLS_PROMPTS,
-    sharedTools: [LIST_SETTINGS],
-    privilegedTools: [SET_SETTING, CLEAR_SETTING],
+    toolSpecs: [
+      { name: LIST_SETTINGS, scope: "shared-only", note: NEEDS_A_SETTING },
+      { name: SET_SETTING, scope: "shared-only", access: "privileged", note: NEEDS_A_SETTING },
+      { name: CLEAR_SETTING, scope: "shared-only", access: "privileged", note: NEEDS_A_SETTING },
+    ],
     contribute: (context) => ({
       tools: context.settings.catalog.empty ? [] : [createListSettingsTool(context), createSetSettingTool(context), createClearSettingTool(context)],
       sections: [settingsSection(context.prompts)],

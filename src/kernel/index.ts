@@ -6,7 +6,7 @@ export { ConversationSettings, SettingCatalog, type SettingSpec } from "./conver
 export { Insights, type InsightsOptions, QueryError } from "./insights/insights.ts";
 export { LOG_PAGE_MAX, LOG_TEXT_MAX, type LogEntry, type LogPage, type LogQuery, LogReader } from "./insights/logs.ts";
 export type { DayRange, UsageCounters, UsageDay, UsageReport, UsageSource } from "./insights/usage.ts";
-export type { BaseDeps, ContributeContext, Contribution, Module, PrepareContext } from "./module.ts";
+export type { BaseDeps, ContributeContext, Contribution, Module, PrepareContext, ToolSpec } from "./module.ts";
 export { BUILTIN_EXTENSION, type Core, type OpenCoreOptions, openCore } from "./open.ts";
 export {
   defaultPrompts,
@@ -65,3 +65,4 @@ export {
   SettingsError,
   type SettingsErrorKind,
 } from "./settings/settings.ts";
+export { describeTools, formatToolCatalog, type ToolCatalog, type ToolRow } from "./tool-catalog.ts";

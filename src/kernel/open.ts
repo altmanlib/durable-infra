@@ -11,6 +11,7 @@ import { EditablePrompts, KERNEL_PROMPTS, PromptCatalog, type PromptEntries, typ
 import { AgentService, type AgentServiceOptions } from "./service/agent-service.ts";
 import type { ChangeLog } from "./settings/change-log.ts";
 import type { Settings } from "./settings/settings.ts";
+import { sharedToolNames } from "./tool-catalog.ts";
 
 /**
  * What an entry process gets from the core: `agent` for the channels, `insights`, `settings` and `logs` (the log files)
@@ -89,8 +90,7 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
         .map((spec) => spec.name)
         .join(","),
     });
-    const sharedTools = modules.flatMap((module) => module.sharedTools ?? []);
-    const privilegedTools = modules.flatMap((module) => module.privilegedTools ?? []);
+    const { shared: sharedTools, privileged: privilegedTools } = sharedToolNames(modules);
     const changes = await options.changes?.(records);
     const agent = await AgentService.open({
       ...options.service,

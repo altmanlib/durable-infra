@@ -13,7 +13,11 @@ export function reminderModule(): Module {
   return {
     name: "reminder",
     prompts: REMINDER_PROMPTS,
-    privilegedTools: [SET_REMINDER, "list_reminders", "cancel_reminder"],
+    toolSpecs: [
+      { name: SET_REMINDER, access: "privileged" },
+      { name: "list_reminders", access: "privileged" },
+      { name: "cancel_reminder", access: "privileged" },
+    ],
     contribute: (context) => ({
       tools: [createReminderTool(context), createListRemindersTool(context), createCancelReminderTool(context)],
       sections: [noRemindersSection(context.prompts)],

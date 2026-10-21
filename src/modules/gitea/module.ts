@@ -58,7 +58,10 @@ export function giteaModule(config: GiteaConfig): Module {
   return {
     name: "gitea",
     prompts: GITEA_PROMPTS,
-    sharedTools: [GITEA_ISSUE_CREATE, GITEA_ISSUE_LIST, GITEA_ISSUE_GET, GITEA_ISSUE_COMMENT_CREATE, GITEA_ISSUE_EDIT],
+    toolSpecs: [GITEA_ISSUE_CREATE, GITEA_ISSUE_LIST, GITEA_ISSUE_GET, GITEA_ISSUE_COMMENT_CREATE, GITEA_ISSUE_EDIT].map((name) => ({
+      name,
+      scope: "shared-only" as const,
+    })),
     async prepare() {
       log.info("gitea.configured", { host: new URL(config.url).host });
       return [gitea.repo as SettingSpec<unknown>];
