@@ -8,11 +8,13 @@ import { type AssistantMessage, Type } from "@earendil-works/pi-ai";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import {
+  AgentDoc,
   AssistantEntry,
   CompactionEntry,
   ConversationBusy,
   type ConversationId,
   type Cursor,
+  configure,
   createRegistry,
   defineDoc,
   defineDocFamily,
@@ -800,6 +802,85 @@ try {
     check("the migrated and edited value survives reopen", afterReopen?.first === "Ada" && afterReopen.last === "King", JSON.stringify(afterReopen));
     check("old code cannot read a document stored at a newer version", await throws(() => opened.snapshot(single1, context)));
     await opened.close(context);
+  }
+
+  // Per-conversation model: `configure` moves one conversation between models of a catalog. It takes effect at the next
+  // request, also while a run is in flight, and a window smaller than the context compacts instead of failing.
+  {
+    const answer = `${"word ".repeat(120)}end`;
+    const pair = fauxProvider({
+      models: [
+        { id: "big", contextWindow: 100_000, maxTokens: 1000 },
+        { id: "small", contextWindow: 700, maxTokens: 200 },
+      ],
+      tokensPerSecond: 200,
+    });
+    pair.setResponses(
+      Array.from({ length: 30 }, () => (transcript) => {
+        const first = transcript.messages[0];
+        if (first?.role === "system" && typeof first.content === "string" && first.content.includes("summarization")) {
+          return fauxAssistantMessage("## Summary\nprobe summary");
+        }
+        return fauxAssistantMessage(answer);
+      }),
+    );
+    const pairModels = createModels();
+    pairModels.setProvider(pair.provider);
+    const big = { provider: "faux", modelId: "big" };
+    const small = { provider: "faux", modelId: "small" };
+    const switching = await Harness.open(
+      await openNodeSqliteStorage(join(dir, "model-switch.sqlite")),
+      { models: pairModels, registry: createRegistry(), settings: { retry: { enabled: false }, compaction: { reserveTokens: 100, keepRecentTokens: 50 } } },
+      context,
+    );
+    const made = await switching.createConversation({ ownership: { kind: "ownerless" }, agent: { model: big, thinkingLevel: "minimal" } }, context);
+    const target = await switching.conversation(made.id, context);
+    if (!target) throw new Error("conversation missing");
+    // Newest first, as `entries` lists them.
+    const answeredBy = async () =>
+      (await target.entries({}, 50, undefined, context)).items
+        .filter((entry) => AssistantEntry.is(entry))
+        .map((entry) => (entry.model?.[0] as AssistantMessage | undefined)?.model);
+    const send = async (requestId: string) => {
+      const settled = await (await target.submit({ type: "input", content: requestId, requestId }, context)).wait(context);
+      await switching.waitForIdle(context);
+      return settled;
+    };
+
+    await send("m1");
+    await switching.commit((tx) => configure(tx, made.id, { model: small }), context);
+    const stored = (await switching.snapshot(AgentDoc, made.id, context))?.model;
+    check(
+      "configure moves an idle conversation to another model of the catalog",
+      stored?.provider === "faux" && stored.modelId === "small",
+      JSON.stringify(stored),
+    );
+
+    const onSmall = await send("m2");
+    const afterSmall = await target.entries({}, 50, undefined, context);
+    check("a turn after configure is answered by the new model", (await answeredBy())[0] === "small", JSON.stringify(await answeredBy()));
+    check(
+      "a window smaller than the context compacts and the turn still completes",
+      onSmall.status === "done" && afterSmall.items.some((entry) => CompactionEntry.is(entry)),
+      onSmall.status,
+    );
+
+    await switching.commit((tx) => configure(tx, made.id, { model: big }), context);
+    const inFlight = await target.submit({ type: "input", content: "m3", requestId: "m3" }, context);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    let configureError = "";
+    try {
+      await switching.commit((tx) => configure(tx, made.id, { model: small }), context);
+    } catch (error) {
+      configureError = String(error);
+    }
+    await inFlight.wait(context);
+    await switching.waitForIdle(context);
+    check("configure while a run is in flight is accepted", configureError === "", configureError);
+    check("the run in flight keeps its model", (await answeredBy())[0] === "big", JSON.stringify(await answeredBy()));
+    await send("m4");
+    check("the next turn uses the model configured during the run", (await answeredBy())[0] === "small", JSON.stringify(await answeredBy()));
+    await switching.close(context);
   }
 
   await harness.close(context);
