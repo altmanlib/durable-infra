@@ -1,6 +1,6 @@
 {
   "name": "@altmanlib/durable-infra",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Shared infrastructure for pi-durable chat bots: sessions, settings, the business database and optional feature modules",
   "license": "MIT",
   "type": "module",
