@@ -108,7 +108,7 @@ test("once the text has diverged, later partials add nothing, even if one happen
   expect((await drain(feed.deltas)).join("")).toBe("First try\n\nFinal");
 });
 
-// A generation is one task: a retry is another attempt of it, the generation after a tool round is a new task (R029).
+// A generation is one task: a retry reuses it; the generation after a tool round is a new task.
 /** Let the reader take what is pending, so the chunks show what streamed when. */
 const tick = () => Bun.sleep(1);
 const call = (status: Slot["status"] = "running"): Slot[] => [{ callId: "c1", name: "web_search", status }];
@@ -169,7 +169,7 @@ test("a final answer whose partials were never seen follows the earlier rounds a
   feed.complete("Done.");
   feed.end();
   expect((await drain(feed.deltas)).join("")).toBe("Checking.\n\nDone.");
-  // The text keeps the tool round's text too, as the card does (R034).
+  // The text keeps the tool round's text too.
   expect(feed.text).toBe("Checking.\n\nDone.");
 });
 
@@ -228,7 +228,7 @@ test("the text of a turn without a tool round is its answer", () => {
   expect(feed.text).toBe("Hello.");
 });
 
-// An `onYield` continuation hands the run to a new generation in the commit of the answer, with no tool round (R034).
+// An `onYield` continuation hands the run to a new generation without a tool round.
 test("a generation handed over without a tool round is completed from its answer before the next one streams", async () => {
   const feed = new TurnFeed(MINE);
   const reading = drain(feed.deltas);

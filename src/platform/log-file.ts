@@ -1,8 +1,4 @@
-/**
- * The service log on disk: every line also goes to `<dir>/app.log`, written synchronously,
- * rotated by size into `app.1.log` … so the total stays bounded. A failing disk never reaches the caller: the file is
- * dropped, reported once on stderr, and reopened after a pause.
- */
+/** The service log on disk, rotated by size so its total stays bounded; a failing disk is reported once on stderr and never reaches the caller. */
 import { closeSync, fstatSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { formatLine, type LogLevel, setLogSink } from "./log.ts";
@@ -137,10 +133,7 @@ export class LogFile {
   }
 }
 
-/**
- * Send every log line to the log file as well as wherever it went so far (the console, or an entry's own filter).
- * Returns the undo: closes the file and puts the previous sink back.
- */
+/** Sends every log line to the file as well as where it went so far; returns the undo. */
 export function logToFile(options: LogFileOptions): () => void {
   const file = new LogFile(options);
   const previous = setLogSink();

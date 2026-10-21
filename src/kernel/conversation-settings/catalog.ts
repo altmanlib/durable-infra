@@ -1,10 +1,6 @@
 import { MAX_SETTING_CHARS, MAX_SETTING_NAME_CHARS, SETTING_NAME, type SettingSpec } from "./spec.ts";
 
-/**
- * Every setting there is, made once when the core opens (`core/open.ts`) and never changed: no setting is registered
- * later, so what a conversation may set is known at start. A name used twice, a name not in the format, or a limit out of
- * range is a mistake in the code, and fails the start.
- */
+/** Every setting, registered once when the core opens; a bad name or limit is a code mistake that fails the start. */
 export class SettingCatalog {
   readonly #specs: readonly SettingSpec<unknown>[];
   readonly #byName: ReadonlyMap<string, SettingSpec<unknown>>;

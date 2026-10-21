@@ -1,8 +1,4 @@
-/**
- * What the modules of an application offer, read from their declarations alone (`Module.toolSpecs` and the texts they
- * own): no storage, no model, nothing opened. The same declarations give a shared conversation its tool names
- * (`sharedToolNames`) and an operator the list of tools (`describeTools`, `formatToolCatalog`), so the two cannot differ.
- */
+/** What the modules offer, read from their declarations alone, so shared-conversation tool names and the operator's list cannot differ. */
 
 import type { Module, ToolSpec } from "./module.ts";
 
@@ -26,10 +22,7 @@ export type ToolCatalog = { modules: string[]; tools: ToolRow[] };
 const specsOf = (modules: readonly Module[]): { module: Module; spec: ToolSpec }[] =>
   modules.flatMap((module) => (module.toolSpecs ?? []).map((spec) => ({ module, spec })));
 
-/**
- * The names a shared conversation is given: `shared` for every member, `privileged` for a privileged asker only. A tool
- * that is off is left out.
- */
+/** The names a shared conversation is given: `shared` for every member, `privileged` for privileged askers only; off tools are left out. */
 export function sharedToolNames(modules: readonly Module[]): { shared: string[]; privileged: string[] } {
   const installed = specsOf(modules)
     .map(({ spec }) => spec)
@@ -66,7 +59,7 @@ function summaryOf(description: string): string {
   return first.length > SUMMARY_CHARS ? `${first.slice(0, SUMMARY_CHARS - 1)}…` : first;
 }
 
-/** The catalog as a table for a terminal: a line per tool, what each column means in the header; or as JSON for a program. */
+/** The catalog as a terminal table, or as JSON for a program. */
 export function formatToolCatalog(catalog: ToolCatalog, options: { json?: boolean } = {}): string {
   if (options.json) return `${JSON.stringify(catalog, null, 2)}\n`;
   const head = `Modules: ${catalog.modules.length > 0 ? catalog.modules.join(", ") : "(none)"}\n`;

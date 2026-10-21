@@ -19,8 +19,7 @@ import { ConversationSettings, openConversationSettings, SettingCatalog, type Se
 import { AgentService } from "../index.ts";
 import { Outbox } from "./outbox.ts";
 
-// A conversation several people share, such as a group, is created with the shared tools only (R036); the privileged
-// ones too, which only a privileged input's run may call (R039).
+// A group gets the shared tools; the privileged ones only for privileged runs.
 const { faux, models, model } = fauxSetup();
 const dir = tempDirPerTest("shared-");
 let service: AgentService | undefined;
@@ -126,7 +125,7 @@ test("a shared conversation without privileged tools offers only the shared tool
   // web_search is not installed here (no search service), so it is left out.
   expect(offered[0]?.sort()).toEqual(["app_status", "current_time", "delete_memo", "get_memo", "list_memos", "set_memo", "web_fetch"]);
   expect(offered[1]).toEqual(expect.arrayContaining(["current_time", "set_reminder", "list_reminders", "cancel_reminder", "web_fetch"]));
-  // The memo is the group's: a private conversation is not offered it (R047).
+  // The memo is the group's: a private conversation is not offered it.
   for (const name of MEMO_TOOLS) expect(offered[1]).not.toContain(name);
   // Told it cannot set reminders there, so it does not promise one.
   expect(sections[0]).toContain("no-reminders");
@@ -243,7 +242,7 @@ test("anyone in a shared conversation may write the memo; the writer is kept whe
     script = answerOk;
   }
   expect(results).toEqual([expect.stringContaining("Saved"), expect.stringContaining("Saved")]);
-  // Every input of a group is matched to its outbox item, the guest's too (R050).
+  // Every group input is matched to its outbox item, the guest's too.
   expect((await memos.get("group", "项目概况"))?.updatedBy).toBe("ou_boss");
   expect((await memos.get("group", "买进表"))?.updatedBy).toBe("ou_guest");
 });
@@ -304,7 +303,7 @@ test("an input replayed after a restart, without `shared`, is still matched: the
   expect((await memos.get("group", "补记"))?.updatedBy).toBe("ou_guest");
 });
 
-// ---- the group's settings (R049) ----
+// ---- the group's settings ----
 
 /** A setting for the tests: letters, kept lower case. */
 const word: SettingSpec<string> = {
@@ -428,7 +427,7 @@ test("a group made with no setting registered gets the settings tools when one i
   expect(moves(await captureLogs(async () => void (await open())))).toBe(0);
 });
 
-// ---- Gitea issues (R050) ----
+// ---- Gitea issues ----
 
 test("with Gitea a group is offered the issue tool and anyone may file one, signed with their name; a private conversation is not offered it", async () => {
   fakeGitea = startFakeGitea();

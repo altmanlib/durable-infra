@@ -17,7 +17,7 @@ const PAGE = 100;
 
 /** A channel's change to its documents, with the line of history that must stand or fall with it. */
 export type ChannelTx = {
-  /** The document at `key` in `collection`, created from `seed` when absent. Change it in place; it is stored when the commit succeeds. */
+  /** The document at `key`, created from `seed` if absent; changes are stored when the commit succeeds. */
   get<T extends ChannelDoc>(collection: string, key: string, seed: T): Promise<T>;
   /** Remove the document at `key`; a later `get` starts again from its seed. */
   retire(collection: string, key: string): Promise<void>;
@@ -46,13 +46,7 @@ const checkKey = (key: string): string => {
   return key;
 };
 
-/**
- * The documents of one channel, kept in the same storage as everything else.
- * A channel reaches Durable only through this class, and only its own documents: the kind of every document is built
- * here from the channel and collection names, so one channel cannot name another's. A collection holds documents by
- * key, one document per key. Writes run one at a time with the rest of the settings, and one commit can also add a
- * line to the history, so a change and the line that tells of it are never half done.
- */
+/** One channel's documents in the shared storage; a channel reaches only its own, and a change can share a commit with its history line. */
 export class ChannelStore {
   readonly #channel: string;
   readonly #deps: ChannelStoreDeps;
@@ -67,8 +61,7 @@ export class ChannelStore {
     const kind = `app.channel.${this.#channel}.${checkName("a collection name", collection)}` as const;
     let family = this.#families.get(kind);
     if (!family) {
-      // A channel may write a document on every message (a group's settings, the checks in progress), so a full copy
-      // every 50 changes keeps what a read replays, and what the storage holds, small.
+      // A full copy every 50 changes keeps replays and storage small.
       family = appDocFamily<ChannelDoc, ChannelDoc>({ kind, version: 1, initial: (seed) => structuredClone(seed), checkpoint: checkpoint.every(50) });
       this.#families.set(kind, family);
     }
@@ -94,10 +87,7 @@ export class ChannelStore {
     return keys.sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
   }
 
-  /**
-   * Change documents in one commit: they all change, or, when `work` throws, none does and the error is passed on.
-   * Commits run one at a time, so what `work` reads is what the commit before it left.
-   */
+  /** Changes documents in one commit: all change, or none when `work` throws. Commits run one at a time. */
   commit<R>(work: (tx: ChannelTx) => Promise<R>): Promise<R> {
     return this.#deps.serial(async () => {
       const at = this.#deps.now();

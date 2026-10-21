@@ -31,16 +31,7 @@ export class Insights {
     this.#now = options.now ?? (() => new Date());
   }
 
-  /**
-   * Token spend by day and by model or tool, within `range`. Either end may be `today`, resolved in the report time
-   * zone, so a client in another time zone still asks for the service's day. Counted afresh from the transcripts.
-   *
-   * With `options.key` only the conversations of that channel key count, and so does their own ledger: what a person
-   * has spent, whatever the others have. A key with no conversation gives an empty report, not an error; the empty key
-   * names none, so it is the way to ask for nothing, never for everything.
-   *
-   * Without `options.key` the report is the whole service's.
-   */
+  /** Token spend by day and by model or tool within `range` (`today` allowed). With `options.key`, only that channel key's conversations count. */
   async usage(query: DayRange = {}, options: { key?: string } = {}): Promise<UsageReport> {
     const range: DayRange = {};
     for (const name of ["from", "to"] as const) {
@@ -51,29 +42,25 @@ export class Insights {
     }
     if (range.from && range.to && range.from > range.to) throw new QueryError(`from (${range.from}) is after to (${range.to})`);
     const records: SpendRecord[] = [];
-    // With a key, the ledger is that of its conversations alone; each source is named by its conversation so none is merged away.
+    // With a key, count only that key's conversations.
     const own: UsageState = { models: {}, tools: {} };
     for await (const id of this.#reader.conversations()) {
       if (options.key !== undefined && (await this.#reader.keyOf(id)) !== options.key) continue;
       for await (const entry of this.#reader.entries(id)) records.push(...spendOf(entry));
       if (options.key === undefined) continue;
-      // Read after the entries, as the whole ledger is below: spend committed during the scan lands in undated, never below zero.
       const spent = await this.#reader.spent(id);
       for (const bucket of ["models", "tools"] as const) {
         for (const [name, usage] of Object.entries(spent?.[bucket] ?? {})) own[bucket][`${id}:${name}`] = usage;
       }
     }
-    // Read the ledger last: spend committed during the scan then lands in undated for this one report, never below zero.
+    // Read last: spend committed during the scan lands in undated, never below zero.
     const totals = options.key === undefined ? await this.#reader.usage() : own;
     const { report, mismatch } = buildUsageReport(records, totals, range, this.#timeZone);
     if (mismatch) log.warn("usage.mismatch", {});
     return report;
   }
 
-  /**
-   * Every conversation that has a channel key, most recently active first. Forks and conversations whose key now points
-   * at a newer one (a stale mapping) are left out: they cannot be addressed by key.
-   */
+  /** Conversations with a channel key, most recently active first; forks and stale mappings are omitted. */
   conversations(): Promise<ConversationInfo[]> {
     return this.#reader.listConversations();
   }

@@ -27,10 +27,7 @@ const text = (value: string | number | boolean | null): string => {
   return BARE.test(raw) ? raw : JSON.stringify(raw);
 };
 
-/**
- * One line per event: `<time> <level> <event> key=value ...`. Events are stable dotted names (`message.received`) so a
- * log can be searched by event; what varies goes into fields (`requestId`, `chatId`, `ms`, ...), never into the name.
- */
+/** One line per event: `<time> <level> <event> key=value ...`; event names are stable dotted names, and what varies goes into fields. */
 export function formatLine(level: LogLevel, event: string, fields: LogFields = {}, error?: unknown, now: Date = new Date()): string {
   const parts = [now.toISOString(), level, event];
   for (const [name, value] of Object.entries(fields)) {

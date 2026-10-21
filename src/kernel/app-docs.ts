@@ -1,30 +1,18 @@
 import type { JsonValue } from "@earendil-works/chord";
 import { type CheckpointInfo, defineDoc, defineDocFamily, type JsonObject } from "@earendil-works/pi-durable";
 
-/**
- * The one way the application defines its own Durable documents (`app.*`), so none can leave out when to store a
- * full copy.
- *
- * Durable stores a document as a full copy (a base) and then each change as a delta; reading it replays every delta
- * since the newest base. A session document drops its older deltas when a new base is stored, and only then: a document
- * without a checkpoint keeps every change it ever had, so the first read after a restart replays its whole history and
- * the storage grows without end (measured on a bot in use: 150,000 turns of the outbox, 1.25 s and 94 MB; with a checkpoint, 1 ms and
- * 0.1 MB). Durable's own documents (`pi.*`) set theirs; ours set it here.
- */
+/** The one way to define the app's own Durable documents (`app.*`), each with a checkpoint: without one, the storage grows without end. */
 
 /** Whether the change about to be stored is stored whole: `value` is the document after it. */
 export type Checkpoint<T> = (value: Readonly<T>, info: CheckpointInfo) => boolean;
 
 export const checkpoint = {
-  /** Store a full copy every `changes` changes: a read replays fewer than that, and the storage keeps no more. */
+  /** Store a full copy every `changes` changes. */
   every:
     <T>(changes: number): Checkpoint<T> =>
     (_value, info) =>
       info.deltasSinceBase + 1 >= changes,
-  /**
-   * A queue that is empty most of the time, such as the outbox: store a full copy whenever it is empty, which is right
-   * after its last item was taken (an empty base is tiny), and every `changes` changes while it is not.
-   */
+  /** Store a full copy whenever the queue is empty, and every `changes` changes otherwise (such as the outbox). */
   whenEmpty:
     <T extends { items: readonly unknown[] }>(changes: number): Checkpoint<T> =>
     (value, info) =>

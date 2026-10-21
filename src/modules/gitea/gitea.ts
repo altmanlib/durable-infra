@@ -10,11 +10,7 @@ import { type GiteaClient, GiteaError } from "./client.ts";
 import type { GiteaRepoRef } from "./settings.ts";
 import { commentSignature, issueSignature } from "./texts.ts";
 
-/**
- * The issue tools of the group's Gitea repository: file one, list them, read
- * one, comment on one, change one. Open to everyone in a group for now,
- * deferred so only shared conversations are offered them, installed only when Gitea is configured.
- */
+/** The group's Gitea issue tools (file, list, read, comment, edit); deferred, so only shared conversations get them. */
 export const GITEA_ISSUE_CREATE = "gitea_issue_create";
 export const GITEA_ISSUE_LIST = "gitea_issue_list";
 export const GITEA_ISSUE_GET = "gitea_issue_get";
@@ -66,10 +62,7 @@ const answers = {
 
 type GateTexts = { noConversation: string; settingsFailed: string; noRepo: string };
 
-/**
- * The gate every issue tool stands at: the conversation's key, and the
- * repository the group set for it. What fails is answered here, in the tool's own words; `event` is its failure log line.
- */
+/** Gate for every issue tool: checks the conversation's key and repository; failures are answered in the tool's words. */
 async function gate(
   deps: { settings: ConversationSettings; gitea: GiteaTools },
   api: KeyedApi,

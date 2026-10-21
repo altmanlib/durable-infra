@@ -23,11 +23,7 @@ export function withToolBudget(messages: readonly Message[], maxRounds: number, 
   return [...messages, { role: "user", content: notice, timestamp: now }];
 }
 
-/**
- * A soft limit on runaway tool loops. Hooks cannot stop a run, only change what one request says, so this asks the model
- * to answer; a model that keeps calling tools anyway is not stopped. The notice goes into that request only, never into
- * the transcript, and at its end, so the provider's cache of the earlier messages stays valid.
- */
+/** A soft limit on tool loops: asks the model to answer without stopping it. The notice goes only into that request, at its end, so the cache stays valid. */
 export function toolBudgetHook(maxRounds: number, prompts: PromptSource, clock: () => number = Date.now) {
   return hook(GenerationTask, {
     beforeRequest: (request, api) => {

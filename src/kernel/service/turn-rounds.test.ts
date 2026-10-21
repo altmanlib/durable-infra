@@ -79,7 +79,7 @@ test("over several tool rounds every round's text streams and none of it is lost
   const { chunks, answer, text } = await run(2);
   expect(answer).toBe(words("final"));
   expect(chunks.join("")).toBe([words("round 1"), words("round 2"), words("final")].join("\n\n"));
-  // What a card keeps once the turn is over (R033).
+  // What is kept once the turn is over.
   expect(text).toBe(chunks.join(""));
   expect(chunksOver(chunks, "round 2:", "final:")).toBeGreaterThan(1);
   expect(chunksOver(chunks, "final:")).toBeGreaterThan(1);

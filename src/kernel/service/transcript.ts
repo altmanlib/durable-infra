@@ -1,16 +1,10 @@
 import type { Message } from "@earendil-works/pi-ai";
 import { AssistantEntry, defineEntry, type EntryRecord, UserEntry, type UserInput } from "@earendil-works/pi-durable";
 
-/**
- * A message recorded without being answered (`AgentService.record`), such as one in a group not addressed to the bot.
- * Its model message is a user message like an input's, so the model sees it, and the history lists it as one.
- */
+/** A message recorded without an answer (`AgentService.record`), such as an unaddressed group message; the model sees it as a user message. */
 export const ChatMessageEntry = defineEntry<{ at: number; backfill?: boolean }>("chat.message");
 
-/**
- * Where a conversation's context starts now (`AgentService.keepRecent`): its `head` is the oldest message kept, `kept`
- * how many were kept. No model message; earlier entries stay in storage, and the history still lists them.
- */
+/** Where a conversation's context now starts (`AgentService.keepRecent`); earlier entries stay in storage. */
 export const WindowEntry = defineEntry<{ kept: number }>("chat.window");
 
 /** Who wrote an input, where a conversation has more than one person, such as a group. Channel-neutral. */
@@ -19,11 +13,7 @@ export type Speaker = {
   id: string;
   /** Display name; may change and is not unique. */
   name?: string;
-  /**
-   * More facts about the speaker, such as a username. Keys are lowercase letters and underscores starting with a letter, never `id`
-   * or `name`; at most `MAX_SPEAKER_ATTRIBUTES` of them, and values are cut to `MAX_ATTRIBUTE_VALUE` characters.
-   * Facts only: what the speaker may do is never part of the conversation.
-   */
+  /** Extra facts such as a username; keys are lowercase and never `id` or `name`. Facts only, never permissions. */
   attributes?: Record<string, string>;
 };
 
@@ -50,10 +40,7 @@ const unescapeAttribute = (value: string): string =>
     .replace(/&gt;/g, ">")
     .replace(/&amp;/g, "&");
 
-/**
- * The speaker as the conversation will hold it: attribute values cut to the limit, empty attributes dropped.
- * Throws on a key that is not allowed or on too many attributes, which is a mistake in the channel's code.
- */
+/** The speaker as the conversation holds it: values cut to the limit, empty ones dropped; throws on invalid keys. */
 export function normalizeSpeaker(speaker: Speaker): Speaker {
   const entries = Object.entries(speaker.attributes ?? {});
   if (entries.length > MAX_SPEAKER_ATTRIBUTES) throw new RangeError(`a speaker has at most ${MAX_SPEAKER_ATTRIBUTES} attributes`);
@@ -68,11 +55,7 @@ export function normalizeSpeaker(speaker: Speaker): Speaker {
   return result;
 }
 
-/**
- * The content of a user input. Without a speaker it is the text itself, as always. With one it is two text parts: a
- * speaker tag made here, then the text. Channels only hand over plain text, so they can never produce the two parts;
- * a tag typed inside a message stays part of the message (see `splitSpeaker`). Expects a normalized speaker.
- */
+/** A user input's content: plain text, or with a speaker, a speaker tag then the text (two parts, made only here). */
 export function userContent(text: string, speaker?: Speaker): UserInput {
   if (!speaker) return text;
   const pairs: [string, string][] = [["id", speaker.id]];

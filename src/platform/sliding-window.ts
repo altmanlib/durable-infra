@@ -2,17 +2,13 @@
 export type SlidingWindowOptions = {
   max: number;
   windowMs: number;
-  /** When this many keys are held, the ones whose events all left the window are let go, so a flood of keys cannot grow the memory without bound. Default 1000. */
+  /** Keys held before expired ones are swept, bounding memory. Default 1000. */
   maxKeys?: number;
 };
 
 const DEFAULT_MAX_KEYS = 1000;
 
-/**
- * Events per key in a sliding window, kept in memory: a restart gives every key a fresh window,
- * which is fine for a guard against floods and against guessing. The one place that counts events in a window: the
- * inputs a conversation may start, the failed attempts of an address. Time is given by the caller, so a test can move it.
- */
+/** Events per key within a sliding window, in memory; a restart resets every window. Time is passed in, so tests can move it. */
 export class SlidingWindow {
   readonly #max: number;
   readonly #windowMs: number;

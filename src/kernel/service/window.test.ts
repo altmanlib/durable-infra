@@ -7,7 +7,7 @@ import { builtinExtensions } from "../../testing/tools.ts";
 import { AgentService } from "../index.ts";
 import { messageText, splitSpeaker } from "./transcript.ts";
 
-// The context window of a group: the oldest messages leave the model's context once there are too many (R038).
+// The oldest messages leave a group's context once there are too many.
 const { faux, models, model } = fauxSetup({ tokensPerSecond: 1000 });
 const dir = tempDirPerTest("window-");
 let service: AgentService | undefined;

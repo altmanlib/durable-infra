@@ -1,29 +1,15 @@
-/**
- * Every piece of text that can be edited from the console, in two kinds. Most are written for the model and are not
- * logic: system prompt sections, instructions of the summary call, the notice added when the tool budget is used up, and
- * the descriptions of tools and their parameters. A few are written for the user and never reach the model: the welcome
- * of each channel (`welcome.*`). Code reads them through a `PromptSource`, never as constants, so the edits stored by
- * the console take effect.
- *
- * The texts come in groups. The kernel owns the ones about conversations (`KERNEL_PROMPTS`); each module brings the
- * ones about its tools (`prompts` of the module); the application adds its own, such as the welcome of its channels,
- * and may replace the default text of an existing one, such as the persona in `system.preamble`. A `PromptCatalog`
- * puts the groups together once, when the core opens.
- *
- * Not here, on purpose: tool parameter schemas, and the sentences tools put into their results (errors, advice on
- * retrying). Those are tied to branching and to values filled in at run time, so they stay next to the code that
- * decides them. The date line of the system prompt is generated and stays with the service.
- */
+/** Texts the console can edit: model-facing (prompt sections, tool descriptions) and user-facing (channel welcomes), read via `PromptSource`. */
+// Tool parameter schemas and result sentences stay in code: they depend on runtime values.
 
 /** When an edited text starts to reach the model. */
 export type PromptEffect =
-  /** The next request of any conversation: system sections and the budget notice are rendered per request. */
+  /** The next request of any conversation. */
   | "next-request"
   /** The next call of the step that uses it. */
   | "next-call"
-  /** After the tool extension is installed again: tool descriptions are read when a tool is defined. */
+  /** After the tools' extension is reinstalled, since descriptions are read then. */
   | "extension-install"
-  /** The next time a channel sends it to a user: the welcome texts, which never reach the model. */
+  /** The next time a channel sends it to a user (welcomes). */
   | "next-send";
 
 export type PromptEntry = {
@@ -35,7 +21,7 @@ export type PromptEntry = {
   effect: PromptEffect;
 };
 
-/** A group of entries, by id. Ids are persistent: the console stores its edits under them, so never rename a published one. */
+/** Entries by id; ids are persistent (edits are stored under them), so never rename one. */
 export type PromptEntries = Readonly<Record<string, PromptEntry>>;
 
 export const entry = (text: string | readonly string[], usage: string, effect: PromptEffect, editable = true): PromptEntry => ({
@@ -45,7 +31,7 @@ export const entry = (text: string | readonly string[], usage: string, effect: P
   effect,
 });
 
-/** The entries about conversations; the text of `system.preamble` is only a neutral default, the application brings its own. */
+/** Conversation entries; `system.preamble` is a neutral default that applications replace. */
 export const KERNEL_PROMPTS = {
   "system.preamble": entry(
     ["You are a helpful assistant in a chat. Answer in the language of the question, briefly and accurately."],
@@ -92,10 +78,7 @@ export const KERNEL_PROMPTS = {
 /** Every id of the kernel's own group, for the places that name one. */
 export type KernelPromptId = keyof typeof KERNEL_PROMPTS;
 
-/**
- * All the entries in force: the groups put together, with the application's replacements of default texts. An id in two
- * groups is a mistake and throws; so is a replacement of an id that no group has.
- */
+/** All entries in force: the groups merged, with application replacements of default texts. Duplicate ids and replacements of unknown ids throw. */
 export class PromptCatalog {
   readonly #entries = new Map<string, PromptEntry>();
 
@@ -129,7 +112,7 @@ export class PromptCatalog {
   }
 }
 
-/** Where code reads prompt texts. Synchronous: sections render and hooks run on paths that cannot wait for a database. */
+/** Synchronous prompt text reader; rendering cannot wait for a database. */
 export interface PromptSource {
   get(id: string): string;
 }
@@ -137,10 +120,7 @@ export interface PromptSource {
 /** The texts built into the code. */
 export const defaultPrompts = (catalog: PromptCatalog): PromptSource => ({ get: (id) => catalog.entry(id).text });
 
-/**
- * `base` with edited texts on top, for a source backed by stored edits. Two rules live here so every source obeys them:
- * a blank text falls back to the base, and an edit of a text that is not editable is ignored.
- */
+/** `base` with stored edits on top; blank edits fall back to base, and edits of non-editable texts are ignored. */
 export function promptsWith(
   catalog: PromptCatalog,
   edits: Readonly<Record<string, string | undefined>>,
@@ -154,12 +134,7 @@ export function promptsWith(
   };
 }
 
-/**
- * The texts in force: the catalog's built-in texts with the console's edits on top. The stored edits are loaded into it
- * when the storage opens (kernel/settings), and again after each change from the console; the service takes this type,
- * so an edit always reaches what reads it. Reads stay synchronous, and a request already being rendered sees one
- * consistent set, because the edits are swapped as a whole.
- */
+/** The texts in force: catalog defaults with the console's edits on top, swapped as a whole so each render sees one consistent set. */
 export class EditablePrompts implements PromptSource {
   readonly catalog: PromptCatalog;
   readonly #base: PromptSource;

@@ -7,7 +7,7 @@ import { builtinExtensions } from "../../testing/tools.ts";
 import { AgentService } from "../index.ts";
 import { messageText, splitSpeaker } from "./transcript.ts";
 
-// Messages recorded into a conversation without asking the model anything, such as what people say in a group (R035).
+// Messages recorded without asking the model, such as what people say in a group.
 const { faux, models, model } = fauxSetup({ tokensPerSecond: 100 });
 const dir = tempDirPerTest("record-");
 let service: AgentService | undefined;

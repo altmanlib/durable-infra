@@ -1,5 +1,4 @@
-// Probe the Durable APIs the bots and AgentService rely on, against a faux model.
-// Run after every Durable upgrade: `bun run probe`. Each check prints PASS/FAIL; any FAIL exits 1.
+// Probes the Durable APIs the bots rely on, against a faux model; run `bun run probe` after each Durable upgrade.
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -201,8 +200,7 @@ try {
   const afterCompact = await conversation.context(context);
   check("compaction entry heads the active context", CompactionEntry.is(afterCompact.head));
 
-  // 7. Tool crash semantics: an interrupted call reruns only when declared `replay: "safe"`; otherwise the model
-  // gets an `interrupted` error result and the tool does not run again.
+  // 7. An interrupted call reruns only when declared `replay: "safe"`; otherwise the model gets an `interrupted` error.
   for (const replay of ["safe", "unsafe"] as const) {
     const toolName = `probe_${replay}`;
     let executions = 0;
@@ -253,8 +251,7 @@ try {
     await toolHarness.close(context);
   }
 
-  // 7b. A tool result's `details`: stored on the toolResult entry, and not part of what the model is sent
-  // (built-in tools put a machine-readable code there).
+  // 7b. A tool result's `details` are stored but not sent to the model.
   {
     const coded = defineTool({
       name: "probe_coded",
@@ -294,8 +291,7 @@ try {
     await codedHarness.close(context);
   }
 
-  // 8. Background timer task created by a tool: the conversation stays idle, a restart across the due time still
-  // fires it, and writing the result plus finishing happen in one commit (the reminder design relies on this).
+  // 8. A background timer survives a restart across its due time; its result and finish commit together.
   {
     const Fired = defineDoc<{ items: string[] }>({ kind: "probe.fired", version: 1, scope: "session", initial: () => ({ items: [] }) });
     const Timer = defineTask<{ at: number }, { phase: "wait" }, string>({
@@ -326,8 +322,7 @@ try {
       },
     });
     const timerDb = join(dir, "timer.sqlite");
-    // As AgentService does: the extension is installed after the Harness opened and before anything resumes, so a task
-    // left by an earlier run must still find its code. The check below fails if Durable stops allowing that.
+    // As AgentService does: install the extension after the Harness opens, before resuming, so leftover tasks find their code.
     const openTimer = async () => {
       const registry = createRegistry();
       const opened = await Harness.open(await openNodeSqliteStorage(timerDb), { models, registry, settings }, context);
@@ -382,8 +377,7 @@ try {
     await timerHarness.close(context);
   }
 
-  // 9. A tool that makes its own model call reports the spend in its result; it lands in pi.usage.tools under the
-  // tool name (web_fetch with a prompt relies on this).
+  // 9. A tool's own model spend is reported in its result and counted under its tool name.
   {
     const spend = {
       input: 120,
@@ -415,9 +409,7 @@ try {
     await usageHarness.close(context);
   }
 
-  // 10. What the usage report counts by day: every model response, failed ones too, is an
-  // assistant entry with timestamp and usage; a tool's own spend is on its toolResult; a compaction summary is in
-  // pi.usage but on no entry. Conversations and entries are listed through the storage.
+  // 10. Usage counts each model response by day, failed ones too; compaction summaries appear only in pi.usage.
   {
     const storage = await openNodeSqliteStorage(join(dir, "report.sqlite"));
     const registry = createRegistry();
@@ -483,8 +475,7 @@ try {
     await reportHarness.close(context);
   }
 
-  // 11. Settings: two app documents change in one commit, a commit whose callback throws leaves both as they were,
-  // a record keyed by free names takes assignment and delete, and all of it survives a reopen (core/settings).
+  // 11. Settings: a multi-document commit is atomic, a throwing commit leaves nothing changed, and all survives a reopen.
   {
     const Edits = defineDoc<{ edits: Record<string, string>; versions: Record<string, number> }>({
       kind: "app.probe-edits",
@@ -505,7 +496,7 @@ try {
     const thrown = await settingsHarness
       .commit(async (tx) => {
         const doc = await tx.doc(Edits);
-        // Throwing before any change is what core/settings does (a version conflict); throwing after one is checked too.
+        // Throwing before a change is what the settings do on a version conflict; throwing after one is checked too.
         doc.edits["system.preamble"] = "changed";
         (await tx.doc(Log)).items.push({ seq: 2, id: "system.preamble" });
         throw new Error("conflict");
@@ -542,9 +533,7 @@ try {
     await settingsHarness.close(context);
   }
 
-  // 12. Keyed documents for channel state (durable-bot R064): a session family is listed by kind through the storage scan, paged and
-  // without retired members; a family member and a singleton change in one commit or not at all; and many small commits
-  // (a polling cursor) stay cheap in time and file size, also when many keys commit at once.
+  // 12. Keyed documents: family listing is paged and skips retired members; a member and a singleton commit together; many small commits stay cheap.
   {
     const Account = defineDocFamily<{ cursor: string; seen: string[] }, string>({
       kind: "app.probe-account",
@@ -672,10 +661,7 @@ try {
     await opened.harness.close(context);
   }
 
-  // 13. A checkpoint drops the past (durable-bot R077): when a session document's checkpointWhen fires, the change is stored as a
-  // base and the document's older revisions are deleted, so a read after reopen replays only what came after the newest
-  // base, and the file stops growing with the number of changes. Without one, every change is kept and replayed. The
-  // application's documents rely on this (core/app-docs.ts).
+  // 13. A checkpoint stores the change as a base and deletes older revisions, so the file stops growing with changes.
   {
     const kept = defineDoc<{ items: string[] }>({ kind: "app.probe-kept", version: 1, scope: "session", initial: () => ({ items: [] }) });
     const based = defineDoc<{ items: string[] }>({
@@ -726,9 +712,7 @@ try {
     );
   }
 
-  // 14. Changing a document's shape (R131): the stored version is compared with the definition's. Older with `migrate`:
-  // the value is converted when read (family members too), and a commit stores it at the new version. Older without
-  // `migrate`, or newer than the definition: the read throws, so old code never writes a newer store.
+  // 14. Shape changes: an older stored version is converted by `migrate` on read; a newer one, or an older one without `migrate`, throws.
   {
     const path = join(dir, "migrate.sqlite");
     const open = async () => Harness.open(await openNodeSqliteStorage(path), { models, registry: createRegistry(), settings }, context);
@@ -804,8 +788,7 @@ try {
     await opened.close(context);
   }
 
-  // Per-conversation model: `configure` moves one conversation between models of a catalog. It takes effect at the next
-  // request, also while a run is in flight, and a window smaller than the context compacts instead of failing.
+  // Per-conversation model: `configure` moves a conversation between catalog models from its next request, even mid-run.
   {
     const answer = `${"word ".repeat(120)}end`;
     const pair = fauxProvider({

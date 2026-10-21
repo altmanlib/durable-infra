@@ -24,10 +24,7 @@ export type MemoRemoveResult = "deleted" | "missing";
 
 export type MemoEntriesOptions = { now?: () => number };
 
-/**
- * A name as it is kept: without the spaces around it, and every run of whitespace inside one space. `undefined` when
- * nothing is left or it is longer than `MAX_MEMO_NAME_CHARS`.
- */
+/** Trims the name and collapses inner whitespace; `undefined` when empty or longer than `MAX_MEMO_NAME_CHARS`. */
 export function normalizeMemoName(name: string): string | undefined {
   const normalized = name.trim().replace(/\s+/g, " ");
   return normalized.length === 0 || normalized.length > MAX_MEMO_NAME_CHARS ? undefined : normalized;
@@ -43,11 +40,7 @@ export function previewOf(head: string): string {
   return line.length > MEMO_PREVIEW_CHARS ? `${line.slice(0, MEMO_PREVIEW_CHARS)}…` : line;
 }
 
-/**
- * The memo of each conversation, entry by entry; a conversation reaches only
- * its own entries, by its key. The limits are checked before writing. A write that fails is not swallowed: it throws,
- * and the caller says it was not kept.
- */
+/** Per-conversation memo entries; each conversation reaches only its own. Limits are checked before writing; write failures throw. */
 export class MemoEntries {
   readonly #db: Kysely<MemoSchema>;
   readonly #now: () => number;
@@ -57,7 +50,7 @@ export class MemoEntries {
     this.#now = options.now ?? Date.now;
   }
 
-  /** The conversation's entries, the one written last first. */
+  /** The conversation's entries, newest first. */
   async list(conversationKey: string): Promise<MemoSummary[]> {
     const rows = await this.#db
       .selectFrom("memo_entry")
@@ -70,7 +63,7 @@ export class MemoEntries {
     return rows.map((row) => ({ name: row.name, updatedAt: row.updated_at, updatedBy: row.updated_by, preview: previewOf(row.head) }));
   }
 
-  /** The entry of that name, or `undefined` when there is none (a name that cannot be kept included). */
+  /** The entry of that name, or `undefined` if none (including an unkeepable name). */
   async get(conversationKey: string, name: string): Promise<MemoEntry | undefined> {
     const normalized = normalizeMemoName(name);
     if (normalized === undefined) return undefined;
@@ -83,15 +76,12 @@ export class MemoEntries {
     return row && { name: row.name, body: row.body, updatedAt: row.updated_at, updatedBy: row.updated_by };
   }
 
-  /**
-   * Write the entry, replacing one of the same name. A new name is refused once the conversation has
-   * `MAX_MEMO_ENTRIES`; replacing one is not. Throws when the write fails.
-   */
+  /** Writes an entry, replacing one of the same name; a new name is refused at `MAX_MEMO_ENTRIES`. Throws when the write fails. */
   async set(conversationKey: string, name: string, body: string, updatedBy: string): Promise<MemoSetResult> {
     const normalized = normalizeMemoName(name);
     if (normalized === undefined) return "invalid_name";
     if (body.length > MAX_MEMO_BODY_CHARS) return "too_large";
-    // Counting and writing in one transaction, so two new names written at once cannot both slip under the limit.
+    // Count and write in one transaction, so concurrent new names cannot both pass the limit.
     return this.#db.transaction().execute(async (trx) => {
       const others = await trx
         .selectFrom("memo_entry")

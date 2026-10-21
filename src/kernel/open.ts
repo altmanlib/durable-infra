@@ -13,32 +13,26 @@ import type { ChangeLog } from "./settings/change-log.ts";
 import type { Settings } from "./settings/settings.ts";
 import { sharedToolNames } from "./tool-catalog.ts";
 
-/**
- * What an entry process gets from the core: `agent` for the channels, `insights`, `settings` and `logs` (the log files)
- * for the query API, and `prompts`, the editable texts in force, for the channels' welcome texts. `conversationSettings`, the per-conversation settings the modules registered,
- * for a channel or an API that reads or changes them without the model. `records`, the business
- * database, in which a channel opens its own tables with `records.tables(domain, migrations)`, and whose health the query
- * API reports. They are closed together with `close()`, once the channels have stopped writing.
- */
+/** What an entry process gets from the core; all are closed together by `close()` once the channels stop writing. */
 export type Core = {
   agent: AgentService;
   insights: Insights;
   settings: Settings;
   prompts: PromptSource;
-  /** The settings of each conversation, such as a group; the same object the settings tools and the modules use. */
+  /** Per-conversation settings, shared with the settings tools and modules. */
   conversationSettings: ConversationSettings;
   logs: LogReader;
   records: Records;
-  /** Close the session storage and the records. Call it after the channels stopped: they may still be writing until then. */
+  /** Close storage and records; call after the channels stop writing. */
   close(): Promise<void>;
 };
 
-/** The service options the core fills in itself; everything else about the service the application may set. */
+/** Service options the application may set; the rest are filled in by the core. */
 type ServiceOptions = Omit<AgentServiceOptions, "databasePath" | "models" | "model" | "catalog" | "prompts" | "extensions" | "sharedTools" | "privilegedTools">;
 
 export type OpenCoreOptions = {
   config: CoreConfig;
-  /** The application version, as released; the modules may report it. */
+  /** The application version, as released. */
   version: string;
   /** The directory of the log files that `logs` reads. */
   logDir: string;
@@ -52,21 +46,11 @@ export type OpenCoreOptions = {
   };
   /** Options of the conversation service, such as the tool round limit. */
   service?: ServiceOptions;
-  /**
-   * Where the application keeps the history of changes, made from the business database once that is open (`records`).
-   * Without it the history is a Durable document; with it the allowlist and `Settings.channel` are not available
-   * (see `AgentServiceOptions.changes`).
-   */
+  /** Change-history store, built from the business database (see `AgentServiceOptions.changes`). */
   changes?: (records: Records) => ChangeLog | Promise<ChangeLog>;
-  /**
-   * Models of the gateway that `config` describes, besides the configured one, that a conversation can be moved to with
-   * `AgentService.setModel`. Their ids are stored by conversations: never rename a released one. Not used with `llm`.
-   */
+  /** Extra gateway models a conversation may move to via `setModel`; their ids are stored, so never rename one. Not used with `llm`. */
   extraModels?: readonly GatewayModel[];
-  /**
-   * The models the conversations use, instead of the OpenAI-compatible gateway that `config` describes; for tests and other
-   * gateways. `model` is the default; `catalog` lists the models `setModel` accepts (see `AgentServiceOptions.catalog`).
-   */
+  /** Models used instead of the gateway from `config`, for tests and other gateways; see `AgentServiceOptions.catalog`. */
   llm?: { models: Models; model: ModelRef; catalog?: readonly ModelRef[] };
   now?: () => Date;
 };
@@ -78,9 +62,9 @@ export const BUILTIN_EXTENSION = "builtin-tools";
 export async function openCore(options: OpenCoreOptions): Promise<Core> {
   const { config, modules = [] } = options;
   const now = options.now ?? (() => new Date());
-  // The start time `app_status` reports; taken once here so both entry processes share the meaning.
+  // Start time for `app_status`, taken once so both processes agree.
   const startedAt = now();
-  // One source for every editable text; the edits stored by the console are loaded into it when the storage opens.
+  // One source for every editable text.
   const catalog = new PromptCatalog(
     [KERNEL_PROMPTS, ...modules.flatMap((module) => (module.prompts ? [module.prompts] : [])), ...(options.prompts?.entries ? [options.prompts.entries] : [])],
     options.prompts?.replace,
@@ -96,7 +80,7 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
           model,
           ...(options.extraModels ?? []).filter((extra) => extra.id !== model.modelId).map((extra) => ({ provider: CLIPROXY_PROVIDER, modelId: extra.id })),
         ];
-    // Before the tools are built, and whether or not a channel starts, so a module always finds its table.
+    // Before the tools are built, so a module always finds its table.
     const specs: SettingSpec<unknown>[] = [];
     for (const module of modules) specs.push(...((await module.prepare?.({ records, prompts, models, model })) ?? []));
     const settings = await openConversationSettings(records, specs);
@@ -117,7 +101,7 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
       model,
       ...(catalog ? { catalog } : {}),
       prompts,
-      // Without any, a shared conversation has every tool; with them, only these (kernel/service/shared-tools.ts).
+      // Without them, shared conversations have every tool (see shared-tools.ts).
       ...(sharedTools.length > 0 || privilegedTools.length > 0 ? { sharedTools, privilegedTools } : {}),
       extensions: (host) => {
         const parts: Contribution[] = modules.map((module) => module.contribute({ ...host, now, startedAt, version: options.version, prompts, settings }));
@@ -148,7 +132,7 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
       },
     };
   } catch (error) {
-    // A module's table, the settings' table or the session storage did not open: do not leave the records open.
+    // Do not leave the records open if a table or storage fails to open.
     await records.close();
     throw error;
   }

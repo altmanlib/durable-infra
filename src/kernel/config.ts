@@ -4,7 +4,7 @@ import { createModels, createProvider, type Models } from "@earendil-works/pi-ai
 
 export const CLIPROXY_PROVIDER = "cliproxyapi";
 
-/** Defaults match the default model grok-4.5 (500,000-token context window per docs.x.ai). */
+/** Default model: grok-4.5, with a 500,000-token context window. */
 export const DEFAULT_MODEL_ID = "grok-4.5";
 export const DEFAULT_CONTEXT_WINDOW = 500_000;
 export const DEFAULT_MAX_TOKENS = 8192;
@@ -37,10 +37,7 @@ function positiveIntEnv(env: Record<string, string | undefined>, name: string, f
   return value;
 }
 
-/**
- * Read core configuration from the environment; throws naming the first missing or invalid variable. `dataDir` is where
- * the application keeps its SQLite files; the application decides (`DATA_DIR`, a path under its root).
- */
+/** Reads core config from the environment; throws naming the first missing or invalid variable. `dataDir` holds the SQLite files. */
 export function loadCoreConfig(dataDir: string, env: Record<string, string | undefined> = process.env): CoreConfig {
   return {
     databasePath: join(dataDir, "agent.sqlite"),
@@ -56,10 +53,7 @@ export function loadCoreConfig(dataDir: string, env: Record<string, string | und
 /** A model of the gateway besides the configured one; the window and the response limit default to the configured model's. */
 export type GatewayModel = { id: string; contextWindow?: number; maxTokens?: number };
 
-/**
- * Models with one OpenAI-compatible provider (the local gateway or any compatible endpoint): the configured model and the
- * `extra` ones, which a conversation can be moved to (`AgentService.setModel`).
- */
+/** Models of the OpenAI-compatible gateway: the configured one plus `extra`, which conversations may move to. */
 export function createCliproxyModels(
   config: Pick<CoreConfig, "baseUrl" | "apiKey" | "modelId" | "contextWindow" | "maxTokens">,
   extra: readonly GatewayModel[] = [],

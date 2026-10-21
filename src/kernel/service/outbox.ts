@@ -4,21 +4,14 @@ import type { Speaker } from "./transcript.ts";
 /** An input whose answer the channel has not confirmed delivering yet. */
 export type PendingTurn = { key: string; requestId: string; text: string; speaker?: Speaker };
 
-/**
- * What the outbox keeps of an input besides what a channel replays: whether it was sent to a shared conversation, and
- * whether it may use the privileged tools there (`shared-tools.ts`); for those, its submission, set once submitted, so
- * the run's inputs can be matched to their items. Never given to a channel.
- */
+/** Outbox fields a channel never sees: sharing flags, and the submission ID that matches a run's inputs (`shared-tools.ts`). */
 export type OutboxItem = PendingTurn & { submission?: number; privileged?: true; shared?: true };
 
-/**
- * Inputs accepted but not yet confirmed delivered, in arrival order. A channel replays them after a restart
- *.
- */
+/** Inputs accepted but not yet confirmed delivered, in arrival order; replayed after a restart. */
 export const Outbox = appDoc<{ items: OutboxItem[] }>({
   kind: "app.outbox",
   version: 1,
   initial: () => ({ items: [] }),
-  // Empty again after each answer is confirmed: a base then, so neither the past turns nor their texts are kept.
+  // A base once empty, so confirmed turns are not kept.
   checkpoint: checkpoint.whenEmpty(100),
 });

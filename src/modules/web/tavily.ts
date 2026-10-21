@@ -21,11 +21,7 @@ function retryAfterMs(header: string | null): number | undefined {
   return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
 }
 
-/**
- * Tavily Search (https://docs.tavily.com/documentation/api-reference/endpoint/search). Only `basic` depth, which costs
- * one credit; the service's own answer, raw page content and images are switched off, because the model reads the
- * hits itself and `web_fetch` gets whole pages.
- */
+/** Tavily search (https://docs.tavily.com/documentation/api-reference/endpoint/search) at `basic` depth, one credit; its own answer, raw content and images are off. */
 export class TavilySearch implements SearchProvider {
   readonly id = "tavily";
   readonly capabilities = { recency: true, domains: true };

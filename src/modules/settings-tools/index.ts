@@ -14,10 +14,7 @@ export { SETTINGS_TOOLS_PROMPTS } from "./prompts.ts";
 
 const NEEDS_A_SETTING = "only if a module registers a setting";
 
-/**
- * Tools to look at and change the settings of a conversation (the ones other modules register). Everyone in a shared
- * conversation may look; only a privileged asker may change. With no setting registered there are no tools.
- */
+/** Tools to view and change a conversation's settings; in a shared conversation only privileged askers may change them. */
 export function settingsToolsModule(): Module {
   return {
     name: "settings-tools",

@@ -1,8 +1,4 @@
-/**
- * Reading the service log files for the console: newest first, an event with its indented
- * continuation lines, filtered, a page at a time. Files are read backwards in chunks from a position, never whole, and
- * one call scans a bounded number of bytes; `next` says where to go on.
- */
+/** Reads service log files for the console: newest first, filtered, a page at a time, never whole files. */
 import { createHash } from "node:crypto";
 import { type FileHandle, open } from "node:fs/promises";
 import { join } from "node:path";
@@ -53,12 +49,7 @@ const CHUNK_BYTES = 64 * 1024;
 const RANK: Record<LogLevel, number> = { info: 0, warn: 1, error: 2 };
 const HEAD = /^(\S+) (info|warn|error) (\S+)(?: (.*))?$/;
 const FIELD = /([^\s=]+)=("(?:[^"\\]|\\.)*"|\S*)/g;
-/**
- * A cursor names a file by its inode and the hash of its first line, then a byte offset in it. The inode alone is not
- * enough: once a rotation deletes a file, the system may give its inode to the next one (Linux does at once), and an old
- * cursor would read the wrong file. A log file only grows and a rotation only renames it, so its first line never
- * changes, and a new file starts with a later one.
- */
+/** Cursor = inode + hash of the file's first line + byte offset; the inode alone can be reused after a rotation. */
 const CURSOR = /^(\d+)-([0-9a-f]{8}):(\d+)$/;
 const NEWLINE = 0x0a;
 
@@ -188,10 +179,7 @@ export class LogReader {
     return files;
   }
 
-  /**
-   * The bytes before `end` (a line boundary) that hold whole lines: from the start of the file, or from just after a
-   * newline. A line longer than the chunk makes the chunk grow until it fits.
-   */
+  /** Bytes before `end` holding whole lines; the chunk grows until one line fits. */
   async #chunk(handle: FileHandle, end: number): Promise<{ buffer: Buffer; from: number }> {
     for (let size = this.#chunkBytes; ; size *= 2) {
       const from = Math.max(0, end - size);

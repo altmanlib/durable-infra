@@ -1,17 +1,4 @@
-/**
- * Who may import what: the layers of the package as one table, checked by architecture.test.ts.
- *
- * Every source file under src/ belongs to exactly one zone: the zone with the longest path that covers it. A file may
- * import the files of its own zone, and the paths its zone lists in `uses`; nothing else under src/. A zone below
- * another is a zone of its own: the broader zone reaches into it only by listing it. A package that
- * some zone lists in `packages` belongs to those zones only; any other package (node:*, bun:test, …) is free.
- *
- * Tests (`*.test.ts`, and the fixtures under a `testing/` directory) may also reach across their own layer, use any
- * `testing/` fixture and `@earendil-works/pi-ai` (for faux models), and whatever their zone lists in `testUses`.
- *
- * Paths here are relative to src/. A path covers itself and, as a directory, everything below it; `uses` may also name
- * a zone, which stands for all its paths.
- */
+/** Import rules as one table, checked by architecture.test.ts; each file belongs to the zone with the longest matching path. */
 
 export type Zone = {
   name: string;
@@ -56,7 +43,7 @@ export const ZONES: Zone[] = [
   // ---- platform: below everything, knows no one ----
   {
     name: "platform",
-    // Listed one by one: platform/records is a zone of its own that only the few who open or take the database may reach.
+    // Listed one by one: platform/records is its own zone.
     paths: ["platform/index.ts", "platform/log.ts", "platform/log-file.ts", "platform/sliding-window.ts", "platform/throttle.ts", "platform/local-time.ts"],
     why: "platform is below everything that runs on the server: the log, the in-process counters and the local time. It knows no one in the package and not Durable",
   },
@@ -250,7 +237,7 @@ export function violation({ from, specifier }: Import, zones: Zone[] = ZONES): s
     if (owners.length === 0) return undefined;
     if (owners.includes(zone)) return undefined;
     if (test && (name === "@earendil-works/pi-ai" || owners.some((owner) => pathsOf(owner).some((path) => layerOf(path) === layerOf(from))))) return undefined;
-    // Name the layers that own it; within one of those layers, the zones, since that is where the line runs.
+    // Name the owning layers, then the zones within them.
     const layers = [...new Set(owners.map((owner) => layerOf(pathsOf(owner)[0] as string)))];
     const named = layers.includes(layerOf(from)) ? owners.map((owner) => owner.name) : layers;
     return explain(`${name} belongs to ${named.join(", ")}`);
@@ -262,7 +249,7 @@ export function violation({ from, specifier }: Import, zones: Zone[] = ZONES): s
   if (target.startsWith("..")) return explain("it reaches outside src/");
   if (zoneOf(target, zones) === zone) return undefined;
   if (reaches(zone.uses, target, zones)) return undefined;
-  // A test may reach across its own layer, except in `modules`: there the layer is many, and none uses another.
+  // Tests may cross their own layer, except in `modules`.
   if (test && ((layerOf(target) === layerOf(from) && layerOf(from) !== "modules") || isTest(target) || reaches(zone.testUses, target, zones))) return undefined;
   return explain(`${zone.name} may use ${zone.uses?.join(", ") || "nothing outside itself"}`);
 }

@@ -8,11 +8,7 @@ export type SettingRemoveResult = "cleared" | "missing";
 
 export type SettingRowsOptions = { now?: () => number };
 
-/**
- * The settings of each conversation, row by row; a conversation reaches
- * only its own, by its key. It knows no setting: names and values are checked by the catalog before they get here. A
- * write that fails is not swallowed: it throws, and the caller says it was not kept.
- */
+/** Per-conversation setting rows; a conversation reaches only its own. Names and values are checked upstream; write failures throw. */
 export class SettingRows {
   readonly #db: Kysely<SettingSchema>;
   readonly #now: () => number;
@@ -44,7 +40,7 @@ export class SettingRows {
     return row?.value;
   }
 
-  /** Set it, replacing what it was; written again even when the value is the same, so the time and writer are fresh. Throws when the write fails. */
+  /** Sets it, replacing what it was, with a fresh time and writer. Throws when the write fails. */
   async write(conversationKey: string, name: string, value: string, updatedBy: string): Promise<void> {
     const row = { value, updated_at: this.#now(), updated_by: updatedBy };
     await this.#db
@@ -54,7 +50,7 @@ export class SettingRows {
       .execute();
   }
 
-  /** Take the setting away; `missing` when it was not set, which is no failure. Throws when the write fails. */
+  /** Removes the setting; `missing` when it was not set. Throws when the write fails. */
   async remove(conversationKey: string, name: string): Promise<SettingRemoveResult> {
     const result = await this.#db
       .deleteFrom("conversation_setting")

@@ -81,10 +81,7 @@ test("as JSON the catalog comes back whole, for a program to read", () => {
   expect(JSON.parse(formatToolCatalog(catalog, { json: true }))).toEqual(JSON.parse(JSON.stringify(catalog)));
 });
 
-/**
- * The tools each module really contributes, with the settings the modules register open: the modules built the way
- * `openCore` builds them, without a service.
- */
+/** The tools each module contributes, built as `openCore` builds them, without a service. */
 async function contributed(modules: readonly Module[]) {
   records = await Records.open(":memory:");
   const prompts = testPrompts();

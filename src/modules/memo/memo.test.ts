@@ -20,10 +20,7 @@ async function realMemos(): Promise<MemoEntries> {
   return openMemoEntries(records);
 }
 
-/**
- * What a tool reads of the session: the conversation's channel key (none when `key` is undefined), and the current run's
- * input matched to a privileged outbox item of `asker`, when given.
- */
+/** The session as a tool sees it: the channel key (none when `key` is undefined) and the privileged asker, when given. */
 function api(key: string | undefined, asker?: string) {
   return {
     conversationId: 7,

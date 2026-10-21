@@ -36,10 +36,7 @@ async function checked<T>(work: (signal: AbortSignal) => T | Promise<T>, ms: num
   }
 }
 
-/**
- * The settings of each conversation: what the catalog registers, kept by
- * the store. The tools list, set and clear them; the features that use one read it with `get`. Storage failures throw.
- */
+/** Per-conversation settings from the catalog; the tools set and clear them, features read them with `get`. Storage failures throw. */
 export class ConversationSettings {
   readonly catalog: SettingCatalog;
   readonly #store: SettingStore;
@@ -51,10 +48,7 @@ export class ConversationSettings {
     this.#timeoutMs = options.checkTimeoutMs ?? CHECK_TIMEOUT_MS;
   }
 
-  /**
-   * The setting as its reader uses it: `undefined` when the conversation has not set it, when what is stored cannot be
-   * decoded (logged), and when the spec is not registered, even if a row of its name is left in the table.
-   */
+  /** A setting as its reader uses it: `undefined` when unset, undecodable (logged), or not registered. */
   async get<T>(key: string, spec: SettingSpec<T>): Promise<T | undefined> {
     if (this.catalog.get(spec.name) === undefined) return undefined;
     const stored = await this.#store.read(key, spec.name);
@@ -64,7 +58,7 @@ export class ConversationSettings {
     return value;
   }
 
-  /** Every registered setting, in the catalog's order, with the conversation's value; rows of names not registered are left out. */
+  /** Every registered setting with the conversation's value, in catalog order. */
   async list(key: string): Promise<SettingView[]> {
     const rows = new Map((await this.#store.list(key)).map((row) => [row.name, row]));
     return this.catalog.all().map((spec) => {

@@ -2,10 +2,7 @@ import { section } from "@earendil-works/pi-durable";
 import type { PromptSource } from "../../kernel/prompts.ts";
 import { SET_REMINDER } from "./reminder.ts";
 
-/**
- * Said where there are tools but no reminders, such as in a group (R036): without it the model promises a reminder it
- * cannot set. Not with no tools at all, where `no-tools` already says so.
- */
+/** Said where there are tools but no reminders, so the model does not promise one. */
 export const noRemindersSection = (prompts: PromptSource) =>
   section(
     "no-reminders",

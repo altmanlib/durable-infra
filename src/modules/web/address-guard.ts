@@ -2,11 +2,7 @@ import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
 import { FetchError } from "./fetcher.ts";
 
-/**
- * Addresses `web_fetch` may not reach: this machine, private and shared networks, link-local (cloud metadata at
- * 169.254.169.254), and the ranges that are not on the public internet. IPv4 inside IPv6 (`::ffff:10.0.0.1`) is caught
- * by the same IPv4 rules. Decided in R036, before groups got the tool.
- */
+/** Addresses `web_fetch` may not reach: this machine, private and shared networks, link-local, and other non-public ranges (IPv4 inside IPv6 included). */
 const BLOCKED = new BlockList();
 for (const [network, prefix] of [
   ["0.0.0.0", 8],
@@ -50,11 +46,7 @@ export type ResolveHost = (host: string) => Promise<readonly string[]>;
 
 const resolveHost: ResolveHost = async (host) => (await lookup(host, { all: true, verbatim: true })).map((entry) => entry.address);
 
-/**
- * Throws `blocked_address` unless every address the URL's host stands for is public; a name that does not resolve is a
- * `network` error, as the request would have been. Checked for every hop of a redirect chain. The request itself
- * resolves the name again, so a name whose answer changes in between (DNS rebinding) is not caught; accepted (§3.3).
- */
+/** Throws `blocked_address` unless every address the host resolves to is public; checked on every redirect hop. DNS rebinding is not caught; accepted. */
 export async function checkAddress(url: URL, resolve: ResolveHost = resolveHost): Promise<void> {
   const host = url.hostname.startsWith("[") ? url.hostname.slice(1, -1) : url.hostname;
   let addresses: readonly string[];

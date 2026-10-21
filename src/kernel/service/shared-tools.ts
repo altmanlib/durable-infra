@@ -1,15 +1,4 @@
-/**
- * Tools of a conversation several people share, such as a group: which tools
- * it has, who may call the privileged ones, and moving conversations made earlier to the current list.
- *
- * A shared conversation is one whose stored `tools` is a list (`configure` with exact registrations); every other
- * conversation leaves it unset and has every tool but the deferred ones (the memo's, R047), which are for shared
- * conversations only. The list is the shared tools, which everyone may use, and the
- * privileged ones (such as reminders), which only a run whose every input was sent `privileged` may call. The hook
- * cannot read entries or submissions, only documents, so the run's inputs (`pi.live`) are matched to the outbox, whose
- * items of shared conversations carry their submission ID; an input it cannot match, or whose item is not marked
- * privileged, is not privileged.
- */
+/** Tools of shared conversations (such as groups): which they have, who may call privileged ones, and migration of older ones. */
 
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import {
@@ -55,16 +44,12 @@ async function refusal(read: DocumentReader, conversationId: ConversationId): Pr
   const inputs = (await read.snapshot(LiveDoc, conversationId, context))?.run?.inputs ?? [];
   if (inputs.length === 0) return "no_input";
   const items = (await read.snapshot(Outbox, context))?.items ?? [];
-  // An input whose item is not marked privileged, or not matched yet, was not sent privileged.
+  // Inputs not matched to a privileged item were not sent privileged.
   const privileged = new Set(items.filter((item) => item.privileged && item.submission !== undefined).map((item) => item.submission));
   return inputs.every((input) => privileged.has(Number(input))) ? undefined : "not_privileged";
 }
 
-/**
- * Who asked in the current run: the speaker of the last of its inputs that the outbox matches (the path the hook
- * takes). Every input of a shared conversation carries its submission there once submitted; a run without one, an
- * input not matched yet, and one without a speaker give `undefined`.
- */
+/** Speaker of the last input of the current run that the outbox matches; `undefined` if none is matched. */
 export async function speakerOf(read: DocumentReader, conversationId: ConversationId): Promise<Speaker | undefined> {
   const inputs = (await read.snapshot(LiveDoc, conversationId, context))?.run?.inputs ?? [];
   if (inputs.length === 0) return undefined;
@@ -81,10 +66,7 @@ export async function askerOf(read: DocumentReader, conversationId: Conversation
   return (await speakerOf(read, conversationId))?.id;
 }
 
-/**
- * Block a privileged tool in a shared conversation unless every input of the current run is privileged; the model is
- * told why (`tool.not-permitted`). Other tools, and every tool of other conversations, are not checked.
- */
+/** Blocks a privileged tool unless every input of the current run is privileged; the model is told `tool.not-permitted`. */
 export function privilegedToolsHook(privileged: readonly string[], prompts: PromptSource) {
   const names = new Set(privileged);
   return hook(ToolTask, {
@@ -102,19 +84,12 @@ export function privilegedToolsHook(privileged: readonly string[], prompts: Prom
 
 const sameNames = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((name, index) => name === b[index]);
 
-/**
- * What a shared conversation stores of its tools: the list as the enabled tools, and again as the ones offered to the
- * model, so it is offered the deferred ones too. A deferred tool, such as the memo's, is one only shared conversations
- * get: a conversation that has every tool (`modelTools` unset) is not offered it.
- */
+/** Tools a shared conversation stores and offers to the model, including its deferred ones. */
 export function sharedAgent(tools: readonly ToolRegistration[]): { tools: ToolRegistration[]; modelTools: ToolRegistration[] } {
   return { tools: [...tools], modelTools: [...tools] };
 }
 
-/**
- * Give every shared conversation the current list (`sharedAgent`), in one commit, at open before work resumes; a
- * conversation that already has it, offered to the model too, is left alone, so a second open changes nothing. Logs a line per conversation; returns how many moved.
- */
+/** Move each shared conversation to the current tool list at open; a second open changes nothing. Returns how many moved. */
 export async function moveToSharedTools(harness: Harness, conversations: AsyncIterable<ConversationId>, tools: readonly ToolRegistration[]): Promise<number> {
   const target = tools.map((tool) => tool.name);
   const moves: { id: ConversationId; from: string[] }[] = [];

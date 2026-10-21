@@ -1,7 +1,4 @@
-/**
- * A Gitea that answers over real HTTP the calls the issue tools make, for
- * the tests of the client, the setting and the tools. Its token is a secret the tests look for in logs and errors.
- */
+/** A Gitea that answers the issue tools' calls over real HTTP, for tests; its token is a secret the tests look for in logs. */
 
 export const FAKE_GITEA_TOKEN = "fake-gitea-token-7f3a91c2";
 

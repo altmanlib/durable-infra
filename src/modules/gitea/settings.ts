@@ -35,10 +35,7 @@ export function repoOf(input: string, baseUrl: string): GiteaRepoRef | undefined
   return SEGMENT.test(owner) && SEGMENT.test(repo) ? { owner, repo } : undefined;
 }
 
-/**
- * The setting `gitea.repo`: checked against Gitea when it is set, kept as
- * Gitea's `owner/name`. Every reason is a fixed text: nothing Gitea answered reaches the model.
- */
+/** The `gitea.repo` setting, checked against Gitea on set; failures use fixed texts, never Gitea's own answer. */
 export function giteaRepoSetting(client: GiteaClient, baseUrl: string): SettingSpec<GiteaRepoRef> {
   return {
     name: "gitea.repo",

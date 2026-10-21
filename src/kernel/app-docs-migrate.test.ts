@@ -7,9 +7,7 @@ import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite
 import { tempDirPerTest } from "../testing/testing.ts";
 import { appDoc, appDocFamily, checkpoint } from "./app-docs.ts";
 
-// Changing the shape of an application document: the stored version is compared with the definition's. An older one is
-// converted when read if the definition says how (`migrate`), and a commit stores it at the new version; an older one
-// without `migrate`, or a newer one than the definition knows, throws on read, so old code never writes a newer store.
+// A stored version older than the definition is converted by `migrate` on read; a newer one, or an older one without `migrate`, throws.
 
 const dir = tempDirPerTest("app-docs-migrate-");
 const open = async () =>

@@ -1,9 +1,6 @@
 import type { Usage } from "@earendil-works/pi-ai";
 
-/**
- * The contract between the `web_search` tool and any search service. Nothing here knows
- * a particular service: types, the error, and the pure functions every provider uses to keep its answers inside it.
- */
+/** Contract between the `web_search` tool and any search service; nothing here is provider-specific. */
 
 export const DEFAULT_MAX_RESULTS = 5;
 /** Most hits a call may ask for, whatever a service allows. */
@@ -89,11 +86,7 @@ export function clampMaxResults(requested: number, providerLimit: number = MAX_R
 const cut = (text: string, limit: number): string => (text.length > limit ? `${text.slice(0, limit - 1)}…` : text);
 const squeeze = (text: string): string => text.replace(/\s+/g, " ").trim();
 
-/**
- * Turn what a service returned into contract hits: entries that do not fit (no title, an address that is not http or
- * https) are dropped, text is cut to its limits, and no more than `max` are kept. The caller decides what an empty
- * outcome means; see `requireUsable`.
- */
+/** Keeps the entries that fit the contract, cut to its limits, at most `max`; `requireUsable` decides what an empty result means. */
 export function cleanHits(raw: readonly { title?: unknown; url?: unknown; snippet?: unknown }[], max: number): SearchHit[] {
   const hits: SearchHit[] = [];
   for (const item of raw) {
@@ -117,7 +110,7 @@ export function cleanHits(raw: readonly { title?: unknown; url?: unknown; snippe
   return hits;
 }
 
-/** A service that listed entries of which none fits the contract answered with something unusable; no entries at all is a normal empty answer. */
+/** Entries listed but none fitting means an unusable answer; no entries at all is a normal empty one. */
 export function requireUsable(received: number, hits: readonly SearchHit[]): void {
   if (received > 0 && hits.length === 0) throw new SearchError("unusable", "the search service returned results, but none of them could be used");
 }

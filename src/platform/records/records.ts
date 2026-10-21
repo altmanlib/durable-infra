@@ -7,11 +7,11 @@ import type { Migrations } from "./migrations.ts";
 /** A domain's name: the prefix of its tables, so a short lower case word. */
 const DOMAIN = /^[a-z][a-z0-9]{0,31}$/;
 
-/** Whether the database answers. Not ok since the first of the failures that no success came after. */
+/** Database health: failing since the first failure with no success after it. */
 export type RecordsHealth = { ok: true } | { ok: false; failingSince: number; error: string };
 
 type Failing = { since: number; error: string };
-/** Reads and writes fail and recover apart: a full disk still reads, so a read that works says nothing of the writes. */
+/** Reads and writes are tracked apart: a full disk can still read. */
 type Side = "read" | "write";
 
 export type RecordsOptions = { now?: () => number };
@@ -39,12 +39,7 @@ function codeOf(error: unknown): string {
   return error instanceof Error ? error.name : "unknown";
 }
 
-/**
- * The business database: records that keep growing and are looked up by field, which do not
- * need to be committed together with Durable's storage. The core holds the file and nothing in it: each domain brings
- * its own tables with `tables(domain, migrations)`, and reads and writes them itself. The database is closed with
- * `close()`, after the channels stopped writing.
- */
+/** The business database: growing records looked up by field, outside Durable's commits. Each domain brings its own tables via `tables`. */
 export class Records {
   readonly #db: BareDb;
   readonly #now: () => number;
@@ -64,14 +59,7 @@ export class Records {
     return records;
   }
 
-  /**
-   * Bring `domain`'s tables to the shape `migrations` give, and hand back the database typed by them. Each domain keeps
-   * its own record of the steps it ran (`<domain>_migration`), so domains number their steps apart; every table and
-   * index a step makes must start with `<domain>_`, so two domains cannot take the same name. A database that has steps
-   * of the domain this code does not know is ahead of the code, and is refused: the older code would write to a shape it
-   * does not understand. A domain is opened once. Throws when a step fails or breaks the naming; the step that failed
-   * left nothing behind (`inTransaction`).
-   */
+  /** Brings a domain's tables to the shape `migrations` give; every table and index must start with `<domain>_`. Refuses a database from newer code. */
   async tables<Schema extends Record<string, object>>(domain: string, migrations: Migrations): Promise<Kysely<Schema>> {
     if (!DOMAIN.test(domain)) throw new RangeError(`a domain must be lower case letters and digits, at most 32 characters: ${domain.slice(0, 40)}`);
     if (this.#domains.has(domain)) throw new Error(`the tables of ${domain} are already open`);
@@ -126,7 +114,7 @@ export class Records {
       return;
     }
     this.#failing.set(side, { since: this.#now(), error });
-    // Once, when it starts: what failed is in the log of whoever asked, every time.
+    // Logged once, when the failure starts.
     log.error("records.failing", { side, error });
   }
 }

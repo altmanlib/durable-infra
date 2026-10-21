@@ -13,11 +13,7 @@ export const MAX_EVENT_DATA_CHARS = 2000;
 
 export type TimerInput = { key: string; event: ScheduledEvent; at: number };
 
-/**
- * Sleeps until `at`, then records the notice and finishes in one commit, so an event fires exactly once even across a
- * restart; one that came due while the process was down fires at the next start. The same shape as a reminder, but
- * what the notice carries is the channel's event, not a text.
- */
+/** Sleeps until `at`, then records the notice and finishes in one commit, so an event fires exactly once across restarts. */
 export const Timer = defineTask<TimerInput, { phase: "wait" }, string>({
   name: TIMER_TASK,
   version: 1,

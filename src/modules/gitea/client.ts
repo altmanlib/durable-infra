@@ -1,8 +1,4 @@
-/**
- * The bot account's door to Gitea: the repository check and the issue calls,
- * written like the search client (`core/web/tavily.ts`). The token goes only in the request header; redirects are not followed, so it never
- * reaches another address; what Gitea says on a failure is kept as `detail` for the log, never for the model.
- */
+/** The bot account's Gitea client; the token is sent only in the header, and redirects are not followed. */
 
 /** A repository as the issue tool needs it. */
 export type GiteaRepo = {
@@ -51,10 +47,7 @@ export type GiteaClient = {
   editIssue(owner: string, name: string, index: number, patch: GiteaIssuePatch, signal?: AbortSignal): Promise<GiteaIssueSummary>;
 };
 
-/**
- * `network`: not reached, or the connection broke; `timeout`; `status`: an HTTP status not expected, in `status`;
- * `unusable`: a success whose answer cannot be read.
- */
+/** `network`, `timeout`, `status` (an unexpected HTTP status), or `unusable` (a success that cannot be read). */
 export type GiteaErrorKind = "network" | "timeout" | "status" | "unusable";
 
 export class GiteaError extends Error {

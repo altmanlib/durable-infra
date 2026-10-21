@@ -1,15 +1,9 @@
-/**
- * What a setting is, as the module that uses it registers it. The settings
- * know no setting of their own: every one comes from its user, through `core/open.ts`.
- */
+/** What a setting is, as the module that uses it registers it; the settings core knows no setting of its own. */
 
 /** What a check came to: the normalized text to keep, or why the value may not be set. */
 export type SettingCheck =
   | { ok: true; value: string }
-  /**
-   * `invalid_value`: not in the setting's format; `rejected`: an outside service says no. The reason reaches the model
-   * as it is, so it is a fixed text of the spec, never something an outside service answered.
-   */
+  /** `invalid_value`: wrong format; `rejected`: an outside service refused it. The reason reaches the model as is, so it must be fixed spec text. */
   | { ok: false; code: "invalid_value" | "rejected"; reason: string };
 
 export type SettingCheckContext = {

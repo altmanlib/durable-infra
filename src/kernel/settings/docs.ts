@@ -3,10 +3,7 @@ import type { Change } from "./change-log.ts";
 
 export type { Change } from "./change-log.ts";
 
-/**
- * Edited prompt texts by catalog id, with a counter per id that every write moves forward (a reset too), so a console
- * that read an older state is refused instead of overwriting. Only edited ids appear in `edits`.
- */
+/** Edited prompt texts by id, each with a version that every write moves forward, so stale edits are refused. */
 export const PromptEdits = appDoc<{ edits: Record<string, string>; versions: Record<string, number> }>({
   kind: "app.prompts",
   version: 1,
@@ -14,10 +11,7 @@ export const PromptEdits = appDoc<{ edits: Record<string, string>; versions: Rec
   checkpoint: checkpoint.every(50),
 });
 
-/**
- * Who may talk to each channel, by channel name, as the channel knows its users (such as an open_id), with
- * a counter per channel like the prompts have.
- */
+/** Who may talk to each channel, by channel name, with a version per channel. */
 export const AllowlistDoc = appDoc<{ channels: Record<string, string[]>; versions: Record<string, number> }>({
   kind: "app.allowlist",
   version: 1,
@@ -33,7 +27,7 @@ export const Changes = appDoc<{ items: Change[] }>({
   checkpoint: checkpoint.every(50),
 });
 
-/** History kept; enough for a person's edits for a long time, and the document stays small. */
+/** Changes kept in the history document; the oldest are dropped past this. */
 export const MAX_CHANGES = 500;
 
 /** Add a change to the history inside the commit that makes it, so neither exists without the other. */

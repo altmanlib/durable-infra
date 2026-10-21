@@ -3,12 +3,7 @@ import { extractContent, extractPlain } from "./extract.ts";
 import { FetchError, type Page, type PageFetcher } from "./fetcher.ts";
 import { HostGate, Semaphore } from "./limits.ts";
 
-/**
- * The headers of a desktop Chrome opening a link, kept together because they must agree with each other: the version
- * and platform in `sec-ch-ua*` match the `User-Agent`, and the `sec-fetch-*` values are those of a typed address.
- * Sent only when a site turned the plain request away. Browser versions age; check this against a current Chrome now
- * and then.
- */
+/** Desktop Chrome headers for the retry after a turned-away request; they must agree with each other, so re-check them against current Chrome. */
 export const BROWSER_HEADERS: Readonly<Record<string, string>> = {
   "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -38,10 +33,7 @@ export type HttpFetcherOptions = {
   /** Longest text handed back; more is cut and flagged. */
   maxTextChars?: number;
   fetch?: typeof fetch;
-  /**
-   * Checks each address before it is requested, the first and every redirect; throws `blocked_address` for this machine
-   * and private networks (`checkAddress`). Tests that serve pages on 127.0.0.1 pass one that lets everything through.
-   */
+  /** Checks each address before a request, including every redirect; throws `blocked_address` for private networks. Tests on 127.0.0.1 pass one that allows all. */
   checkAddress?: (url: URL) => Promise<void>;
   /** How `checkAddress` resolves names when it is the default one. */
   resolveHost?: ResolveHost;
@@ -56,11 +48,7 @@ function turnedAway(response: Response): boolean {
   return response.status === 403 || response.headers.get("cf-mitigated")?.toLowerCase() === "challenge";
 }
 
-/**
- * Gets pages with plain HTTP requests. A request first goes out with the runtime's own headers, which say nothing
- * untrue about the client. If the site turns that away, the call is repeated once with the headers of a desktop
- * browser and stays on them for the rest of its redirect chain. Reads no JavaScript-built content.
- */
+/** Fetches pages with plain HTTP; on a turned-away request, retries once with browser headers. Reads no JavaScript-built content. */
 export class HttpFetcher implements PageFetcher {
   readonly #browserHeaders: Record<string, string>;
   readonly #timeoutMs: number;
@@ -103,7 +91,7 @@ export class HttpFetcher implements PageFetcher {
           await this.#hosts.wait(current.host, combined, stopped);
           const response = await this.#request(current, jar, disguised ? this.#browserHeaders : {}, combined, stopped);
           if (!disguised && turnedAway(response)) {
-            // A single retry, which does not count as a redirect. Cookies from the turned-away answer are dropped with it.
+            // A single retry, not counted as a redirect; cookies from the refused answer are dropped.
             await response.body?.cancel();
             disguised = true;
             jar.clear();

@@ -46,19 +46,11 @@ type State = { edits: Record<string, string>; versions: Record<string, number>; 
 
 const lockOf = (entry: PromptEntry): PromptLock | undefined => {
   if (!entry.editable) return "guard";
-  // Tool descriptions are read when the extension is installed, so an edit would wait for a restart; shown, not edited.
+  // Read at extension install, so the console shows it but does not edit it.
   return entry.effect === "extension-install" ? "restart" : undefined;
 };
 
-/**
- * What an operator changes without a deploy, kept in the same storage as everything else. By default each change and its
- * record in the history are one commit, so neither exists without the other. With a `ChangeLog` of the application's own
- * (its business database, say) the change is committed first and noted after it, and when noting it fails the change
- * stands and the failure is logged; then the allowlist and the channels' documents are not available, since their
- * history is written in their own commits. Writes run one at a time; reads answer from memory.
- *
- * Edits reach whatever reads the `EditablePrompts` it was opened with: the model's requests, and the channels' welcomes.
- */
+/** Operator-changed settings, stored with everything else; writes run one at a time, reads come from memory. Edits reach every reader of `EditablePrompts`. */
 export class Settings {
   readonly #harness: Harness;
   readonly #storage: Storage;
@@ -94,7 +86,7 @@ export class Settings {
         now,
         maxChanges,
         serial: (work) => this.#serial(work),
-        // The history is shared: a change made by the list shows in `changes()` too.
+        // Shared history: list changes also show in `changes()`.
         refresh: async () => {
           this.#state = await Settings.#read(harness);
         },
@@ -103,7 +95,7 @@ export class Settings {
     );
   }
 
-  /** Who may use each channel; channels open their list at start, the console reads and changes it. Not with a `ChangeLog` of the application's own. */
+  /** Each channel's user list; not available with a custom `ChangeLog`. */
   get access(): AccessList {
     if (this.#external) throw new Error("the allowlist is not available when the application keeps the history of changes itself");
     return this.#access;
@@ -116,13 +108,13 @@ export class Settings {
     return result;
   }
 
-  /** Load the stored settings and apply them; call before any work resumes, so no request renders an older text. */
+  /** Load and apply stored settings; call before work resumes. */
   static async open(
     harness: Harness,
     storage: Storage,
     options: { prompts: EditablePrompts; now?: () => number; maxChanges?: number; changes?: ChangeLog },
   ): Promise<Settings> {
-    // A watch is not needed: this process is the only writer. The documents are created here so a read finds them.
+    // This process is the only writer, so no watch is needed; create the documents now so reads find them.
     await harness.commit(async (tx) => {
       await tx.doc(PromptEdits);
       if (options.changes) return;
@@ -154,9 +146,9 @@ export class Settings {
     this.#prompts.setEdits(this.#state.edits);
   }
 
-  /** The documents of a channel, for that channel alone: hand it to the channel when it starts, as its list of users is. */
+  /** A channel's own documents, handed to that channel alone. */
   channel(name: string): ChannelStore {
-    // Its documents keep their history in their own commits, which an application's own log cannot be part of.
+    // Channel history lives in its own commits, so it cannot use a custom log.
     if (this.#external) throw new Error("a channel's documents are not available when the application keeps the history of changes itself");
     let store = this.#channels.get(name);
     if (!store) {
@@ -194,10 +186,7 @@ export class Settings {
     };
   }
 
-  /**
-   * Replace the text of a prompt. `version` is the one the caller read; a different one means someone changed it since,
-   * and nothing is written. Text equal to the default is stored as no edit, so `edited` stays true only for real edits.
-   */
+  /** Replace a prompt's text; `version` must match the stored one or nothing is written. Default text is stored as no edit. */
   setPrompt(id: string, text: string, version: number): Promise<PromptView> {
     return this.#write(id, version, () => {
       if (text.trim() === "") throw new SettingsError("invalid", "the text must not be empty; reset the prompt to go back to the default");
@@ -226,7 +215,7 @@ export class Settings {
       await this.#harness.commit(async (tx) => {
         const doc = await tx.doc(PromptEdits);
         const current = doc.versions[id] ?? 0;
-        // Checked before anything is touched, inside the commit that writes, so a stale caller cannot slip in between.
+        // Checked inside the write's commit, so a stale caller cannot slip in.
         if (version !== current) throw new SettingsError("conflict", `${id} was changed since it was read (version ${current}, not ${version}); read it again`);
         const before = doc.edits[id] ?? null;
         if (before === after) return;
@@ -255,7 +244,7 @@ export class Settings {
     });
   }
 
-  /** Note in the history that a conversation was moved to another model (`AgentService.setModel`); the move itself is the caller's. */
+  /** Note a conversation's model change in the history; the caller does the move. */
   recordModelChange(key: string, before: string | null, after: string): Promise<void> {
     return this.#serial(async () => {
       await this.#append({ at: this.#now(), area: "conversation-model", target: key, before, after });
@@ -263,11 +252,7 @@ export class Settings {
     });
   }
 
-  /**
-   * Note a change of the application's own in the history, such as an operator's change to an account; the change itself is
-   * the caller's, made before. `area` names the kind (not one of the kernel's: `prompt`, `allowlist`, `conversation`,
-   * `channel`, `model`, `conversation-model`), and `target` what it was made to.
-   */
+  /** Note an application's own change in the history; `area` must not be one of the kernel's areas. */
   record(change: { area: string; target: string; before: string | null; after: string | null }): Promise<void> {
     if (change.area === "" || KERNEL_AREAS.has(change.area))
       throw new SettingsError("invalid", `an application's area must not be empty or one of the kernel's: ${change.area}`);
@@ -278,10 +263,7 @@ export class Settings {
     });
   }
 
-  /**
-   * Note a channel's own change in the history. `target` is shown as `<channel>/<target>`; call after the channel's store
-   * write succeeded.
-   */
+  /** Note a channel's change in the history, shown as `<channel>/<target>`; call after the channel's store write. */
   recordChannelChange(channel: string, change: { target: string; before: string | null; after: string | null }): Promise<void> {
     if (!/^[a-z][a-z0-9-]{0,31}$/.test(channel))
       throw new SettingsError("invalid", `a channel name must be lower case letters, digits and dashes, at most 32 characters: ${channel.slice(0, 40)}`);

@@ -9,7 +9,7 @@ const context = BACKGROUND_CONTEXT;
 /** Most people remembered as turned away; the oldest are forgotten first. */
 export const MAX_DENIED = 50;
 
-/** A user ID as text: letters, digits and a few separators, short. A channel's own IDs, such as an open_id or a numeric user ID, fit. */
+/** A user ID: letters, digits and a few separators, up to 64 characters. */
 const USER_ID = /^[A-Za-z0-9_.:@-]{1,64}$/;
 
 /** What a channel does with the list: ask it for every message, and tell it who it turned away. */
@@ -30,10 +30,7 @@ type Stored = { channels: Record<string, string[]>; versions: Record<string, num
 
 const sorted = (ids: Iterable<string>): string[] => [...new Set(ids)].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 
-/**
- * Who may use each channel, kept in storage so the console can change it without a restart. A channel opens its list when it starts: the first time, the list it is configured with becomes the stored
- * one, and from then on the stored list rules. Every message asks `allows`, which answers from memory.
- */
+/** Who may use each channel, stored so the console can change it without a restart; the stored list rules once a channel has started. */
 export class AccessList {
   readonly #harness: Harness;
   readonly #now: () => number;
@@ -69,10 +66,7 @@ export class AccessList {
     for (const [channel, ids] of Object.entries(this.#stored.channels)) this.#lists.set(channel, new Set(ids));
   }
 
-  /**
-   * Start serving a channel. `configured` is its own setting (an environment variable): used once, when nothing is
-   * stored yet. It may not be empty, so a channel never starts with nobody allowed in.
-   */
+  /** Start serving a channel; `configured` seeds the list only when nothing is stored yet, and may not be empty. */
   open(channel: string, configured: readonly (string | number)[]): Promise<ChannelAccess> {
     return this.#serial(async () => {
       const seed = sorted(configured.map(String));
@@ -92,7 +86,7 @@ export class AccessList {
         await this.#refresh();
         log.info("access.seeded", { channel, users: seed.length });
       } else if (seed.join(",") !== sorted(stored).join(",")) {
-        // The stored list wins; saying so keeps an edited environment variable from looking like it should have worked.
+        // The stored list wins; warn so an edited env var is not silently ignored.
         log.warn("access.env_ignored", { channel, configured: seed.length, stored: stored.length });
       }
       this.#opened.add(channel);

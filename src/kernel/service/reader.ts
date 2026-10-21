@@ -11,10 +11,7 @@ const PAGE = 200;
 /** Entries `lastActivity` looks at before giving up: bookkeeping entries carry no message. */
 const RECENT_ENTRIES = 20;
 
-/**
- * Read-only access to what the storage holds, for queries. It never commits and never schedules work, so reading
- * alongside running conversations is safe. Harness lists no conversations, so that one read goes to the storage.
- */
+/** Read-only queries over storage; never commits or schedules, so it is safe alongside running conversations. */
 export class SessionReader {
   readonly #harness: Harness;
   readonly #storage: Storage;
@@ -34,10 +31,7 @@ export class SessionReader {
     } while (cursor !== undefined);
   }
 
-  /**
-   * Entries the conversation itself appended, newest first. Entries a fork inherits from its parent are left out, so
-   * reading every conversation sees each entry once.
-   */
+  /** The conversation's own entries, newest first; inherited fork entries are left out so each is seen once. */
   async *entries(conversationId: ConversationId): AsyncIterable<EntryRecord> {
     let cursor: Cursor | undefined;
     do {
@@ -47,10 +41,7 @@ export class SessionReader {
     } while (cursor !== undefined);
   }
 
-  /**
-   * When the conversation last said or heard something: the latest message time among its newest entries, or undefined
-   * when none of them carries one. Looks at a few entries only, since the newest ones decide it.
-   */
+  /** Time of the newest message among the last few entries, or undefined. */
   async lastActivity(conversationId: ConversationId): Promise<number | undefined> {
     let looked = 0;
     for await (const entry of this.entries(conversationId)) {
@@ -92,10 +83,7 @@ export class SessionReader {
     return this.#harness.snapshot(UsageDoc, conversationId, context);
   }
 
-  /**
-   * Every conversation that has a channel key, most recently active first. Forks and conversations whose key now points
-   * at a newer one (a stale mapping) are left out: they cannot be addressed by key.
-   */
+  /** Conversations with a channel key, most recently active first; forks and stale mappings are omitted. */
   async listConversations(): Promise<ConversationInfo[]> {
     const pending = await this.pendingInputs();
     const found: ConversationInfo[] = [];

@@ -5,10 +5,7 @@ import { createCancelReminderTool, createListRemindersTool, createReminderTool, 
 
 export { REMINDER_PROMPTS } from "./prompts.ts";
 
-/**
- * Reminders: a task that waits for the time and then leaves a notice for the channel to deliver. In a shared
- * conversation they change state, so only a privileged asker may use them.
- */
+/** Reminders: a task that leaves a notice at the set time; in a shared conversation only privileged askers may use them. */
 export function reminderModule(): Module {
   return {
     name: "reminder",

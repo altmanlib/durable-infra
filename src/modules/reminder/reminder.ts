@@ -15,10 +15,7 @@ const REMIND_TASK = "core.reminder";
 
 type RemindInput = { key: string; text: string; at: number };
 
-/**
- * Sleeps until `at`, then records the notice and finishes in one commit, so a reminder fires exactly once even
- * across a restart. A reminder that came due while the process was down fires at the next start.
- */
+/** Sleeps until `at`, then records the notice and finishes in one commit, so a reminder fires exactly once across restarts. */
 export const Remind = defineTask<RemindInput, { phase: "wait" }, string>({
   name: REMIND_TASK,
   version: 1,

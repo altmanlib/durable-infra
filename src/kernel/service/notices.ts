@@ -4,10 +4,7 @@ import { appDoc, appDocFamily, checkpoint } from "../app-docs.ts";
 
 const context = BACKGROUND_CONTEXT;
 
-/**
- * What a channel asked to be told at a time (`AgentService.schedule`). The core keeps `data` and gives it back, and never
- * reads it: the channel decides what it means and how it is written (JSON, say).
- */
+/** What a channel scheduled (`AgentService.schedule`); the core stores it without reading it. */
 export type ScheduledEvent = {
   /** What it is, in the channel's words, such as `captcha_timeout`. */
   kind: string;
@@ -23,10 +20,7 @@ type NoticeBase = {
   dueAt: number;
 };
 
-/**
- * Something the service wants a channel to act on without a user input behind it: a message to send, such as a due
- * reminder, or an event the channel scheduled for itself.
- */
+/** A message to send (such as a due reminder) or a scheduled event, for the channel to act on. */
 export type Notice = (NoticeBase & { text: string }) | (NoticeBase & { event: ScheduledEvent });
 
 /** Whether a notice is an event a channel scheduled, not a message to send. */
@@ -37,7 +31,7 @@ export const Notices = appDoc<{ items: Notice[] }>({
   kind: "app.notices",
   version: 1,
   initial: () => ({ items: [] }),
-  // Empty again once every notice is confirmed: a base then, so a read never replays the notices of the past.
+  // A base once empty, so reads never replay confirmed notices.
   checkpoint: checkpoint.whenEmpty(100),
 });
 

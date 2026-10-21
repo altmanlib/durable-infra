@@ -7,11 +7,7 @@ import { askerOf } from "../../kernel/service/shared-tools.ts";
 import { formatLocal } from "../../platform/local-time.ts";
 import { log } from "../../platform/log.ts";
 
-/**
- * The settings of a group: everyone may look, only the privileged may
- * change them (`set_setting` and `clear_setting` are privileged tools). Deferred, like the memo's, so only shared
- * conversations are offered them; installed only when some setting is registered.
- */
+/** The group's settings: everyone may look, only privileged askers may change them. Deferred, so only shared conversations get them. */
 export const LIST_SETTINGS = "list_settings";
 export const SET_SETTING = "set_setting";
 export const CLEAR_SETTING = "clear_setting";
@@ -26,12 +22,12 @@ const unknown = (name: string) => error("unknown_setting", `There is no setting 
 
 type Deps = { settings: ConversationSettings; prompts: PromptSource };
 
-/** How much of a value a log line keeps; settings hold no secrets (§10), so the value itself is logged. */
+/** Length cap for a value in a log line; settings hold no secrets. */
 const LOG_VALUE_CHARS = 80;
 
 const shown = (value: string | undefined) => value?.slice(0, LOG_VALUE_CHARS);
 
-/** What the setting is now, for the log line of its change; `undefined` when not set or unreadable: a log never fails a change. */
+/** Current value for the change's log line; `undefined` if unset or unreadable. */
 async function currentValue(settings: ConversationSettings, key: string, name: string): Promise<string | undefined> {
   try {
     return (await settings.list(key)).find((view) => view.spec.name === name)?.value;
@@ -57,7 +53,7 @@ export function createListSettingsTool(deps: Deps) {
         log.error("setting.failed", { key, name: "", action: "list" }, cause);
         return failed("read");
       }
-      // Who changed a setting is kept, not shown (§5).
+      // Who changed a setting is stored, not shown.
       const lines = views.map(({ spec, value, updatedAt }) =>
         [
           `- ${spec.name}: ${spec.summary}`,
@@ -79,7 +75,7 @@ export function createSetSettingTool(deps: Deps) {
       value: Type.String({ description: deps.prompts.get("tool.set_setting.value") }),
     }),
     deferred: true,
-    // The check only reads, and writing the same value again leaves the same row: an interrupted call may run again.
+    // Re-running an interrupted set is harmless: it writes the same row.
     replay: "safe",
     execute: async (args, api, context) => {
       const key = await keyOf(api, context);
@@ -89,7 +85,7 @@ export function createSetSettingTool(deps: Deps) {
       let by = "";
       let previous: string | undefined;
       try {
-        // Only a privileged asker gets here (the hook), and theirs is the input the outbox matches (§6.2).
+        // Only a privileged asker gets here; their input is matched in the outbox.
         by = (await askerOf(api, api.conversationId)) ?? "";
         previous = await currentValue(deps.settings, key, name);
         outcome = await deps.settings.set(key, name, args.value, by);
@@ -146,10 +142,7 @@ export function createClearSettingTool(deps: Deps) {
   });
 }
 
-/**
- * Said where the conversation has the settings tools: what they are for, that only certain people may change them, and
- * that a setting is configuration, not an instruction (§7). Not where there is no setting, since then there are no tools.
- */
+/** The settings section, shown where the conversation has the settings tools. */
 export const settingsSection = (prompts: PromptSource) =>
   section("settings", ({ agent }) => (agent.tools.some((tool) => tool.name === LIST_SETTINGS) ? prompts.get("system.settings") : undefined), {
     tag: false,

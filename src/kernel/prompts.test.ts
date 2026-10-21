@@ -97,13 +97,13 @@ const searching: SearchProvider = {
   search: async () => ({ hits: [{ title: "A result", url: "https://example.test/a", snippet: "text" }] }),
 };
 
-/** One setting registered, so the settings tools are installed and their descriptions read (R049). */
+/** One setting registered, so the settings tools are installed and their descriptions read. */
 const oneSetting = new ConversationSettings(
   new SettingCatalog([{ name: "test.item", summary: "s", format: "f", check: (value) => ({ ok: true, value }), decode: (value) => value }]),
   { list: async () => [], read: async () => undefined, write: async () => {}, remove: async () => "missing" },
 );
 
-/** Gitea configured, so the issue tools are installed and their descriptions read (R050); none is ever called here. */
+/** Gitea configured, so the issue tools are installed and their descriptions read; none is called here. */
 const someGitea: GiteaTools = {
   client: {
     repo: async () => "missing",

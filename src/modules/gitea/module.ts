@@ -48,10 +48,7 @@ export function giteaConfigFromEnv(env: Record<string, string | undefined>): Git
   return { url: `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}`, token };
 }
 
-/**
- * The Gitea of a group: the setting `gitea.repo` and the issue tools that use
- * it. An application that has no Gitea does not list the module.
- */
+/** The group's Gitea: the `gitea.repo` setting and the issue tools; not listed when the app has no Gitea. */
 export function giteaModule(config: GiteaConfig): Module {
   const client = new GiteaHttpClient({ baseUrl: config.url, token: config.token });
   const gitea: GiteaTools = { client, repo: giteaRepoSetting(client, config.url) };

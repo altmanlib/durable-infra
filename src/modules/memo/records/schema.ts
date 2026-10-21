@@ -1,7 +1,4 @@
-/**
- * The memo's table in the business database, as Kysely types the queries by. The table itself is made by the
- * migrations (`migrations.ts`); keep the two in step. Nothing outside `core/memo/records` sees these types.
- */
+/** The memo table's types, as Kysely queries them; the migrations create the table and must stay in step. */
 
 /** One entry of a conversation's memo. */
 export type EntryTable = {

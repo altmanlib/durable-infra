@@ -1,7 +1,4 @@
-/**
- * The conversation settings' table in the business database, as Kysely types the queries by. The table itself is made by
- * the migrations (`migrations.ts`); keep the two in step. Nothing outside `core/conversation-settings/records` sees these types.
- */
+/** The settings table's types, as Kysely queries them; the migrations create the table and must stay in step. */
 
 /** One setting of a conversation. */
 export type SettingTable = {

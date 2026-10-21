@@ -1,12 +1,7 @@
 import type { Database, SQLQueryBindings } from "bun:sqlite";
 import type { SqliteDatabase } from "kysely";
 
-/**
- * Lets Kysely's SQLite dialect drive `bun:sqlite`. The dialect asks for a small interface modelled on better-sqlite3
- * (https://kysely-org.github.io/kysely-apidoc/interfaces/SqliteDatabase.html); `bun:sqlite` differs in two ways: the
- * parameters are spread, not an array, and a statement has no `reader` flag. It does list the columns it returns, which
- * is empty for a statement that returns none (an insert, a `create`), so that tells the two apart.
- */
+/** Adapts `bun:sqlite` to Kysely's better-sqlite3-style dialect: parameters are spread, and an empty column list marks a statement that returns nothing. */
 export function bunSqlite(database: Database): SqliteDatabase {
   return {
     close: () => database.close(),

@@ -3,11 +3,7 @@ import { defineTool } from "@earendil-works/pi-durable";
 import type { BaseDeps } from "../../kernel/module.ts";
 import { formatLocal } from "../../platform/local-time.ts";
 
-/**
- * Facts about the running application: its version, when it started and for how long it has run
- *. Only facts that are safe to show every user belong here; check §5 of the
- * design before adding one. Read-only, so an interrupted call may simply run again and report the new process.
- */
+/** Facts about the running application (version, start time, uptime); only facts safe to show every user belong here. Read-only. */
 export function createAppStatusTool(deps: Pick<BaseDeps, "now" | "prompts" | "startedAt" | "version">) {
   return defineTool({
     name: "app_status",

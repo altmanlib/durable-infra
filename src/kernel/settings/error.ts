@@ -14,10 +14,7 @@ export type SettingsErrorKind =
   /** What the caller changed was changed by someone else since it was read. */
   | "conflict";
 
-/**
- * A change the caller must correct or re-read; the message says what. The kinds above are the kernel's; a channel or a
- * feature that has its own, such as "no such group", names it as the type argument and handles it itself.
- */
+/** A change the caller must correct or re-read. Channels with their own kinds narrow the type argument. */
 export class SettingsError<Kind extends string = SettingsErrorKind> extends Error {
   constructor(
     readonly kind: Kind,

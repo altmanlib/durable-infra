@@ -121,9 +121,7 @@ test("the kernel defines its documents only through kernel/app-docs.ts", () => {
   expect(direct).toEqual([]);
 });
 
-// Text written for the model is in the prompt catalogs (kernel/prompts.ts, and the prompts.ts of each module), text for
-// the person who administers a Gitea in the module's texts.ts. Any other string or template in Chinese is copy that
-// slipped into logic; comments are not looked at, and tests may name things in Chinese.
+// Model-facing text lives in the prompt catalogs and Gitea admin text in texts.ts; other Chinese in code is stray copy. Tests are exempt.
 const COPY_HOMES = [/^kernel\/prompts\.ts$/, /^modules\/[^/]+\/prompts\.ts$/, /^modules\/gitea\/texts\.ts$/];
 const HAN = /\p{Script=Han}/u;
 

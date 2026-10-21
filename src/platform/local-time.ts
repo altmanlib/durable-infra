@@ -1,9 +1,4 @@
-/**
- * Times as the model and the user see them: local wall-clock time, never a zone name, UTC or an offset
- *. Everything the tools say or accept about time goes through here, so the
- * zone is chosen in one place: `zone` defaults to the service's own and becomes a per-user value later without
- * touching the tools.
- */
+/** Local wall-clock time for the model and user, never a zone name or offset; the zone is chosen here in one place. */
 
 /** The zone the service runs in (`TZ`). */
 export function serviceZone(): string {
@@ -22,11 +17,7 @@ const WALL_CLOCK = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?$/;
 /** An ISO 8601 date and time that carries its own offset: `...Z` or `...+08:00`. */
 const WITH_OFFSET = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i;
 
-/**
- * The instant (ms) a local date and time stands for, or undefined when it is not one. A date and time with an offset
- * of its own is taken at its word. In a zone that skips an hour, a time inside the gap moves on to the first time
- * that exists; in one that repeats an hour, the first of the two is meant.
- */
+/** The instant a local date and time stands for, or undefined; a time in a skipped hour moves forward, in a repeated hour takes the first. */
 export function parseLocal(value: string, zone: string = serviceZone()): number | undefined {
   const text = value.trim();
   if (WITH_OFFSET.test(text)) {

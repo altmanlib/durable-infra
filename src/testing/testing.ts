@@ -34,7 +34,7 @@ import type { SearchProvider } from "../modules/web/search.ts";
 import type { PageSummarizer } from "../modules/web/summarizer.ts";
 import { type LogLevel, setLogSink } from "../platform/log.ts";
 
-/** Every text there is: the kernel's and those of all the modules, as an application that lists them all would have, and the application's own `extra`. */
+/** All texts: the kernel's, the modules', and the application's `extra`. */
 export const testCatalog = (extra: PromptEntries = {}): PromptCatalog =>
   new PromptCatalog([KERNEL_PROMPTS, CLOCK_PROMPTS, REMINDER_PROMPTS, WEB_PROMPTS, MEMO_PROMPTS, SETTINGS_TOOLS_PROMPTS, GITEA_PROMPTS, extra]);
 
@@ -64,13 +64,7 @@ export function fauxSetup(options: FauxOptions = {}) {
   return { faux, models, model: { provider: "faux", modelId: id } };
 }
 
-/**
- * A fresh directory for each test; returns the getter of the current one.
- *
- * The directories are removed after the last test of the file, not after each test. Hooks run in the order they were
- * registered, so an `afterEach` here would delete a directory before the test's own `afterEach` has closed the database
- * in it. Linux lets that pass; macOS answers it with SQLite's "disk I/O error".
- */
+/** A fresh directory per test, removed after the file's last test: an earlier `afterEach` would delete it under open databases (macOS fails on that). */
 export function tempDirPerTest(prefix: string): () => string {
   const made: string[] = [];
   let current = "";
@@ -132,10 +126,7 @@ export async function captureLogs(work: () => Promise<unknown>): Promise<{ line:
   return lines;
 }
 
-/**
- * An extension that continues the first final answer once with `text`, as an `onYield` hook does: the run is handed to
- * a new generation without a tool round in between.
- */
+/** An extension that continues the first final answer once with `text`, as an `onYield` hook does. */
 export function continueOnce(text = "go on"): AgentExtension {
   let continued = false;
   return {
@@ -152,7 +143,7 @@ export function continueOnce(text = "go on"): AgentExtension {
   };
 }
 
-/** A history of changes in memory, newest last, that can be made to fail: the `ChangeLog` of an application's own, for tests. */
+/** In-memory `ChangeLog` for tests; can be made to fail. */
 export class MemoryChangeLog implements ChangeLog {
   readonly all: Change[] = [];
   failing = false;

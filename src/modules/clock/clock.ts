@@ -3,10 +3,7 @@ import { defineTool } from "@earendil-works/pi-durable";
 import type { BaseDeps } from "../../kernel/module.ts";
 import { formatLocal } from "../../platform/local-time.ts";
 
-/**
- * Exact current time, as local time. The system prompt only carries the date, at day granularity, to keep the provider cache warm.
- * Read-only, so an interrupted call may simply run again.
- */
+/** Exact local time; the system prompt carries only the date, so the provider's prompt cache stays warm. Read-only. */
 export function createClockTool(deps: Pick<BaseDeps, "now" | "prompts">) {
   return defineTool({
     name: "current_time",

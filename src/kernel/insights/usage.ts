@@ -19,10 +19,7 @@ export type UsageReport = {
   to?: string;
   /** Days with spend, oldest first. */
   days: UsageDay[];
-  /**
-   * Spend Durable counted that no entry carries, so it has no date (compaction summaries among it). Only given when
-   * the range is open on both ends.
-   */
+  /** Spend Durable counted with no date (such as compaction summaries); given only for an open range. */
   undated?: UsageCounters;
   /** Sum of `days`, plus `undated` when given. */
   total: UsageCounters;
@@ -70,11 +67,7 @@ export function isDay(value: string): boolean {
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
 }
 
-/**
- * Report of `records` grouped by day and source. `totals` is Durable's ledger; what it holds beyond the records is the
- * undated part. A negative difference means a record was counted that Durable did not count: `mismatch` is set, and
- * that counter of `undated` is reported as zero.
- */
+/** Groups `records` by day and source; what Durable's `totals` hold beyond them is `undated`. A negative difference sets `mismatch`. */
 export function buildUsageReport(
   records: Iterable<SpendRecord>,
   totals: UsageState,

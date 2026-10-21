@@ -83,11 +83,11 @@ export function createWebSearchTool(deps: { search: SearchProvider; prompts: Pro
     name: WEB_SEARCH,
     description: deps.prompts.get("tool.web_search.description"),
     parameters: parameters(deps.search, deps.prompts),
-    // Reading changes nothing, so an interrupted call may simply run again; at worst it costs one more search.
+    // A repeated search only costs one more search.
     replay: "safe",
     execute: async (args, api, context) => {
       const started = Date.now();
-      // In the log lines, so a change that follows a search can be traced to the conversation that made it.
+      // Logged so a search can be traced to its conversation.
       const key = await keyForLog(api, context);
       const provider = deps.search.id;
       const query = args.query.trim();

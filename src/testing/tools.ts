@@ -1,6 +1,4 @@
-// The tools of all the modules built from plain dependencies, for tests that open a service directly instead of through
-// `openCore`: no database, no model, no network unless a test supplies one. The names a shared conversation has are the
-// modules' own declarations, so they cannot drift from what `openCore` passes.
+// All modules' tools built from plain dependencies, for tests that open a service directly instead of through `openCore`.
 import type { ToolRegistration } from "@earendil-works/pi-durable";
 import { BUILTIN_EXTENSION } from "../kernel/open.ts";
 import type { AgentExtension } from "../kernel/service/host.ts";

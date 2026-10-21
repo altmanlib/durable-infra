@@ -3,17 +3,9 @@ import type { AgentService, ConversationKey, OwnsKey } from "./agent-service.ts"
 import { TurnFailed } from "./agent-service.ts";
 import { isEvent, type Notice, type ScheduledEvent } from "./notices.ts";
 
-/**
- * Delivery that every channel needs and that does not depend on how a channel talks to its users: replaying answers that were never confirmed delivered, and delivering notices that fire without a user input.
- * A channel says which keys are its own, how to send text to the user behind a key, and its texts; the rules of order,
- * confirmation and retry live here once.
- */
+/** Delivery shared by all channels: replays unconfirmed answers and notices; a channel supplies its keys, sender and texts. */
 
-/**
- * Sends text to the user behind a conversation key; throws when it was not sent. Replay passes the pending input's
- * `requestId` so a channel can tie the answer to the original message (for example to schedule deleting it); notices
- * omit it.
- */
+/** Sends text to the user behind a key; throws if not sent. Replay passes `requestId` so the answer can be tied to its message. */
 export type SendToKey = (key: ConversationKey, text: string, requestId?: string) => Promise<void>;
 
 /** What a user reads instead of an answer: the stand-in for an empty one, and why there is none. */
@@ -43,11 +35,7 @@ export type ReplayOptions = {
   skip?: (requestId: string) => boolean;
 };
 
-/**
- * Deliver the answers of inputs that were accepted but never confirmed delivered. Replies are sent whole. Keys are
- * replayed in parallel and the inputs of one key in arrival order; a reply that cannot be sent stays pending, and so do
- * the later ones of its key, until the next replay. Returns how many were delivered.
- */
+/** Delivers unconfirmed answers: keys in parallel, one key's inputs in order; a failure holds back that key's later inputs. Returns the count delivered. */
 export async function replayPending(service: ReplayService, options: ReplayOptions): Promise<number> {
   const { channel, owns, send, texts, skip } = options;
   const byKey = new Map<ConversationKey, Awaited<ReturnType<ReplayService["pending"]>>>();
@@ -84,16 +72,9 @@ export type NoticeOptions = {
   channel: string;
   owns: OwnsKey;
   send: SendToKey;
-  /**
-   * What the channel does when an event it scheduled (`AgentService.schedule`) comes due. It is run again if it throws
-   * and, like a send, once more after a crash between doing it and confirming it, so it must do no harm done twice.
-   * A channel that schedules nothing leaves it out.
-   */
+  /** Runs when a scheduled event comes due; may run again after a crash, so it must be idempotent. Omit if nothing is scheduled. */
   handle?: (key: ConversationKey, event: ScheduledEvent) => Promise<void>;
-  /**
-   * Why sending to this user is pointless for now (a reason for the log), or undefined for an ordinary failure. Such a
-   * notice is not retried on the clock; it waits for `retry` or the next start.
-   */
+  /** A reason when sending to this user is pointless for now, else undefined; such notices wait for `retry` or the next start. */
   waiting?: (error: unknown) => string | undefined;
   /** Waits between attempts to send one notice; a notice still unsent afterwards waits for `retry` or the next start. */
   retryDelaysMs?: readonly number[];
@@ -111,12 +92,7 @@ export type Notices = {
 
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 5_000, 30_000];
 
-/**
- * Deliver notices such as due reminders: first the ones left unconfirmed by an earlier run,
- * then each new one. A notice is confirmed after it was sent, so a crash in between sends it again (at least once).
- * Notices go out one at a time in the order they fired. An event the channel scheduled is handed to `handle` instead of
- * being sent, with the same order, retry and confirmation.
- */
+/** Delivers notices such as due reminders, oldest first; confirmed after sending, so a crash may resend one (at least once). Scheduled events go to `handle`. */
 export async function startNotices(service: NoticeService, options: NoticeOptions): Promise<Notices> {
   const { channel, owns, send, handle, waiting } = options;
   const retryDelaysMs = options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
@@ -127,7 +103,7 @@ export async function startNotices(service: NoticeService, options: NoticeOption
   const deliver = async (notice: Notice): Promise<void> => {
     const fields = { id: notice.id, key: notice.key };
     if (isEvent(notice) && !handle) {
-      // Nothing in this channel schedules events, so none should arrive; it stays unconfirmed rather than be lost.
+      // No `handle` means no scheduled events are expected; keep it unconfirmed.
       log.warn(`${channel}.notice.unhandled`, { ...fields, kind: notice.event.kind });
       return;
     }

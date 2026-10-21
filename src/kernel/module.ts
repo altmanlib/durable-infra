@@ -8,25 +8,25 @@ import type { ExtensionHost } from "./service/host.ts";
 /** What every module can use, whatever it adds. */
 export type BaseDeps = ExtensionHost & {
   now: () => Date;
-  /** When the application started (taken once when the core opened). */
+  /** When the application started. */
   startedAt: Date;
   /** The application version, as released. */
   version: string;
-  /** The texts in force: descriptions of the tools and their parameters, and whatever else the module says to the model. */
+  /** The texts in force, such as tool descriptions. */
   prompts: PromptSource;
 };
 
 /** What a module gets when the core opens, before the conversation settings do. */
 export type PrepareContext = {
-  /** The business database: a module with a table opens it here, with `records.tables(domain, migrations)`. */
+  /** Business database; a module with a table opens it here via `records.tables`. */
   records: Records;
   prompts: PromptSource;
-  /** The model the conversations use, for a module that calls a model itself, such as the page summaries. */
+  /** Models, for a module that calls one itself. */
   models: Models;
   model: ModelRef;
 };
 
-/** What a module gets when the extension is built: the settings are open by then, and so is the Harness. */
+/** What a module gets when its extension is built; settings and the Harness are open by then. */
 export type ContributeContext = BaseDeps & {
   settings: ConversationSettings;
 };
@@ -34,47 +34,26 @@ export type ContributeContext = BaseDeps & {
 /** The parts of the one `builtin-tools` extension that a module adds. */
 export type Contribution = Pick<Extension, "tools" | "sections" | "tasks">;
 
-/**
- * What a module says about one of its tools, apart from the tool itself: where it is offered and who may call it. This is
- * the one place that says so; the names a shared conversation is given and the listing of an application's tools are
- * both read from it.
- */
+/** Where and by whom a tool may be used, apart from the tool itself; the one place that says so. */
 export type ToolSpec = {
   /** The tool's name, which is persistent. */
   readonly name: string;
-  /**
-   * Where the tool is offered. `everywhere` (the default): every conversation, a one-to-one one included. `shared-only`:
-   * a conversation several people share, such as a group; the tool is `deferred`, so a conversation that has every tool
-   * is not offered it.
-   */
+  /** `everywhere` (default), or `shared-only` for shared conversations such as groups. */
   readonly scope?: "everywhere" | "shared-only";
-  /**
-   * Who may call it in a shared conversation. `anyone` (the default): every member. `privileged`: only a run whose
-   * inputs were all sent `privileged`, since the tool changes state. A one-to-one conversation is not checked.
-   */
+  /** `anyone` (default), or `privileged`: only runs whose inputs were all sent `privileged`; one-to-one chats are not checked. */
   readonly access?: "anyone" | "privileged";
   /** Not installed with this configuration, such as a search tool without a search service; `note` says why. */
   readonly off?: true;
-  /** What an operator reading the list should know: why the tool is off, or what else it depends on. */
+  /** Operator-facing note: why it is off, or what it depends on. */
   readonly note?: string;
 };
 
-/**
- * A feature that an application opens or leaves out: it brings its tools, its texts and, when it needs them, a table and
- * settings, and nothing else in the core knows it. The modules of an
- * application are listed once, in the order their tools should appear; a module never uses another.
- *
- * Tool names, task names, prompt ids and table names of a module are persistent identifiers: conversations, stored
- * edits and the database refer to them, so never rename a published one.
- */
+/** An optional feature bringing its own tools, texts, and optionally a table and settings. Its persistent names (tools, tasks, prompt ids, tables) are never renamed once published. */
 export interface Module {
   readonly name: string;
-  /** The texts the module owns, in the catalog's words; their ids start with `tool.<name of a tool>` or `system.<module>`. */
+  /** Texts the module owns; ids start with `tool.<name>` or `system.<module>`. */
   readonly prompts?: PromptEntries;
-  /**
-   * The tools the module brings, as the application would configure them. Each tool `contribute` returns is declared
-   * here (a test holds the two together), and a tool that is `off` is declared but not returned.
-   */
+  /** Declared tools; each tool `contribute` returns is declared here, and an `off` tool is declared but not returned. */
   readonly toolSpecs?: readonly ToolSpec[];
   /** Runs once when the core opens. Returns the conversation settings the module owns, if any. */
   prepare?(context: PrepareContext): Promise<readonly SettingSpec<unknown>[]>;
