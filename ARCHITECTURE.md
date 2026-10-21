@@ -38,7 +38,7 @@ face; it does not contain one.
 
 ## 2. The runtime dependencies
 
-Three packages of one family, all peer dependencies, all pinned to one exact version (1.3.0 today):
+Three packages of one family, all peer dependencies, all pinned to one exact version (see `peerDependencies` in `package.json`):
 
 - `@earendil-works/pi-durable` — the durable substrate: sessions, documents (a base plus deltas),
   submissions and tasks, stored in SQLite. Everything in §5 and §6 stands on it.
