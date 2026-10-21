@@ -9,6 +9,7 @@ import { settingsToolsModule } from "../modules/settings-tools/index.ts";
 import { webModule } from "../modules/web/index.ts";
 import { fauxSetup, tempDirPerTest } from "../testing/testing.ts";
 import { loadCoreConfig } from "./config.ts";
+import type { SettingSpec } from "./conversation-settings/index.ts";
 import type { Module } from "./module.ts";
 import { type Core, type OpenCoreOptions, openCore } from "./open.ts";
 import { entry } from "./prompts.ts";
@@ -110,6 +111,22 @@ test("a module's own table and settings are opened before the first request, in 
   core = await open(everything());
   expect(core.settings).toBeDefined();
   expect(await core.records.health()).toEqual({ ok: true });
+});
+
+test("a setting a module registered is set and read through the core, for a channel that does not go through the model", async () => {
+  const greeting: SettingSpec = {
+    name: "test.greeting",
+    summary: "A greeting.",
+    format: "text",
+    check: (input) => ({ ok: true, value: input }),
+    decode: (stored) => stored,
+  };
+  const owner: Module = { name: "owner", prepare: async () => [greeting], contribute: () => ({}) };
+  core = await open([owner]);
+  expect((await core.conversationSettings.set("feishu:g1", "test.greeting", "hello", "ou_1")).result).toBe("saved");
+  expect(await core.conversationSettings.get("feishu:g1", greeting)).toBe("hello");
+  expect(await core.conversationSettings.get("feishu:g2", greeting)).toBeUndefined();
+  expect((await core.conversationSettings.set("feishu:g1", "test.other", "x", "ou_1")).result).toBe("unknown_setting");
 });
 
 test("the texts of the modules and of the application are one catalog the console edits; the application replaces a default text", async () => {

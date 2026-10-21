@@ -3,7 +3,7 @@ import { defineExtension, type ModelRef } from "@earendil-works/pi-durable";
 import { log } from "../platform/log.ts";
 import { Records } from "../platform/records/records.ts";
 import { CLIPROXY_PROVIDER, type CoreConfig, createCliproxyModels, type GatewayModel } from "./config.ts";
-import { openConversationSettings, type SettingSpec } from "./conversation-settings/index.ts";
+import { type ConversationSettings, openConversationSettings, type SettingSpec } from "./conversation-settings/index.ts";
 import { Insights } from "./insights/insights.ts";
 import { LogReader } from "./insights/logs.ts";
 import type { Contribution, Module } from "./module.ts";
@@ -15,7 +15,8 @@ import { sharedToolNames } from "./tool-catalog.ts";
 
 /**
  * What an entry process gets from the core: `agent` for the channels, `insights`, `settings` and `logs` (the log files)
- * for the query API, and `prompts`, the editable texts in force, for the channels' welcome texts. `records`, the business
+ * for the query API, and `prompts`, the editable texts in force, for the channels' welcome texts. `conversationSettings`, the per-conversation settings the modules registered,
+ * for a channel or an API that reads or changes them without the model. `records`, the business
  * database, in which a channel opens its own tables with `records.tables(domain, migrations)`, and whose health the query
  * API reports. They are closed together with `close()`, once the channels have stopped writing.
  */
@@ -24,6 +25,8 @@ export type Core = {
   insights: Insights;
   settings: Settings;
   prompts: PromptSource;
+  /** The settings of each conversation, such as a group; the same object the settings tools and the modules use. */
+  conversationSettings: ConversationSettings;
   logs: LogReader;
   records: Records;
   /** Close the session storage and the records. Call it after the channels stopped: they may still be writing until then. */
@@ -133,6 +136,7 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
       insights: new Insights(agent.reader),
       settings: agent.settings,
       prompts,
+      conversationSettings: settings,
       logs: new LogReader({ dir: options.logDir }),
       records,
       close: async () => {

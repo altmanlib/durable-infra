@@ -2,7 +2,15 @@
 // database are in `./platform`, the features in `./modules/*`, the test fixtures in `./testing`.
 
 export { CLIPROXY_PROVIDER, type CoreConfig, createCliproxyModels, type GatewayModel, loadCoreConfig } from "./config.ts";
-export { ConversationSettings, SettingCatalog, type SettingSpec } from "./conversation-settings/index.ts";
+export {
+  ConversationSettings,
+  maxCharsOf,
+  SettingCatalog,
+  type SettingClearResult,
+  type SettingSetResult,
+  type SettingSpec,
+  type SettingView,
+} from "./conversation-settings/index.ts";
 export { Insights, type InsightsOptions, QueryError } from "./insights/insights.ts";
 export { LOG_PAGE_MAX, LOG_TEXT_MAX, type LogEntry, type LogPage, type LogQuery, LogReader } from "./insights/logs.ts";
 export type { DayRange, UsageCounters, UsageDay, UsageReport, UsageSource } from "./insights/usage.ts";
