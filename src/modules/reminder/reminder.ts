@@ -16,13 +16,15 @@ const REMIND_TASK = "core.reminder";
 type RemindInput = { key: string; text: string; at: number };
 
 /** Sleeps until `at`, then records the notice and finishes in one commit, so a reminder fires exactly once across restarts. */
-export const Remind = defineTask<RemindInput, { phase: "wait" }, string>({
+export const Remind = defineTask<RemindInput, { phase: "wait" } | { phase: "fire" }, string>({
   name: REMIND_TASK,
   version: 1,
   initial: () => ({ phase: "wait" }),
   phases: {
     wait: async (task, runtime, context) => {
-      await runtime.sleep(task.input.at, context);
+      await runtime.sleepUntil(task.input.at, { phase: "fire" }, context);
+    },
+    fire: async (task, runtime, context) => {
       await runtime.commit(async (tx) => {
         (await tx.doc(Notices)).items.push({
           id: String(runtime.taskId),
@@ -48,7 +50,7 @@ type Live = { id: TaskId; at: number; text: string };
 async function liveReminders(api: { conversationId: ConversationId; commit: ToolExecutionApi["commit"] }, context: Context): Promise<Live[]> {
   const found = await api.commit(async (tx) => {
     const records: Live[] = [];
-    for (const status of ["pending", "running"] as const) {
+    for (const status of ["pending", "running", "waiting", "sleeping"] as const) {
       const page = await tx.scanTasks({ conversationId: api.conversationId, kind: REMIND_TASK, status }, MAX_PENDING_REMINDERS + 1);
       for (const record of page.items) {
         if (record.abortRequested) continue;

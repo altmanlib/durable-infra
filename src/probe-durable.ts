@@ -48,6 +48,7 @@ const ChannelMap = defineDocFamily<{ conversationId: number }, number>({
   kind: "probe.channel",
   version: 1,
   scope: "session",
+  checkpointWhen: () => false,
   family: true,
   initial: (conversationId) => ({ conversationId }),
 });
@@ -293,14 +294,22 @@ try {
 
   // 8. A background timer survives a restart across its due time; its result and finish commit together.
   {
-    const Fired = defineDoc<{ items: string[] }>({ kind: "probe.fired", version: 1, scope: "session", initial: () => ({ items: [] }) });
-    const Timer = defineTask<{ at: number }, { phase: "wait" }, string>({
+    const Fired = defineDoc<{ items: string[] }>({
+      kind: "probe.fired",
+      version: 1,
+      scope: "session",
+      checkpointWhen: () => false,
+      initial: () => ({ items: [] }),
+    });
+    const Timer = defineTask<{ at: number }, { phase: "wait" } | { phase: "fire" }, string>({
       name: "probe.timer",
       version: 1,
       initial: () => ({ phase: "wait" }),
       phases: {
         wait: async (task, runtime, taskContext) => {
-          await runtime.sleep(task.input.at, taskContext);
+          await runtime.sleepUntil(task.input.at, { phase: "fire" }, taskContext);
+        },
+        fire: async (_task, runtime, taskContext) => {
           await runtime.commit(async (tx) => {
             (await tx.doc(Fired)).items.push(String(runtime.taskId));
             return { status: "terminal", outcome: { status: "completed", result: "fired" } };
@@ -481,9 +490,16 @@ try {
       kind: "app.probe-edits",
       version: 1,
       scope: "session",
+      checkpointWhen: () => false,
       initial: () => ({ edits: {}, versions: {} }),
     });
-    const Log = defineDoc<{ items: { seq: number; id: string }[] }>({ kind: "app.probe-log", version: 1, scope: "session", initial: () => ({ items: [] }) });
+    const Log = defineDoc<{ items: { seq: number; id: string }[] }>({
+      kind: "app.probe-log",
+      version: 1,
+      scope: "session",
+      checkpointWhen: () => false,
+      initial: () => ({ items: [] }),
+    });
     const path = join(dir, "settings.sqlite");
     const open = async () => Harness.open(await openNodeSqliteStorage(path), { models, registry: createRegistry(), settings }, context);
     let settingsHarness = await open();
@@ -539,11 +555,25 @@ try {
       kind: "app.probe-account",
       version: 1,
       scope: "session",
+      checkpointWhen: () => false,
       family: true,
       initial: () => ({ cursor: "", seen: [] }),
     });
-    const Other = defineDocFamily<{ n: number }, number>({ kind: "app.probe-other", version: 1, scope: "session", family: true, initial: (n) => ({ n }) });
-    const Counter = defineDoc<{ n: number }>({ kind: "app.probe-counter", version: 1, scope: "session", initial: () => ({ n: 0 }) });
+    const Other = defineDocFamily<{ n: number }, number>({
+      kind: "app.probe-other",
+      version: 1,
+      scope: "session",
+      checkpointWhen: () => false,
+      family: true,
+      initial: (n) => ({ n }),
+    });
+    const Counter = defineDoc<{ n: number }>({
+      kind: "app.probe-counter",
+      version: 1,
+      scope: "session",
+      checkpointWhen: () => false,
+      initial: () => ({ n: 0 }),
+    });
     const path = join(dir, "channel.sqlite");
     const openAt = async () => {
       const storage = await openNodeSqliteStorage(path);
@@ -663,7 +693,13 @@ try {
 
   // 13. A checkpoint stores the change as a base and deletes older revisions, so the file stops growing with changes.
   {
-    const kept = defineDoc<{ items: string[] }>({ kind: "app.probe-kept", version: 1, scope: "session", initial: () => ({ items: [] }) });
+    const kept = defineDoc<{ items: string[] }>({
+      kind: "app.probe-kept",
+      version: 1,
+      scope: "session",
+      checkpointWhen: () => false,
+      initial: () => ({ items: [] }),
+    });
     const based = defineDoc<{ items: string[] }>({
       kind: "app.probe-based",
       version: 1,
@@ -718,8 +754,15 @@ try {
     const open = async () => Harness.open(await openNodeSqliteStorage(path), { models, registry: createRegistry(), settings }, context);
     type V1 = { name: string };
     type V2 = { first: string; last: string };
-    const single1 = defineDoc<V1>({ kind: "app.probe-shape", version: 1, scope: "session", initial: () => ({ name: "" }) });
-    const family1 = defineDocFamily<V1, string>({ kind: "app.probe-shapes", version: 1, scope: "session", family: true, initial: (name) => ({ name }) });
+    const single1 = defineDoc<V1>({ kind: "app.probe-shape", version: 1, scope: "session", checkpointWhen: () => false, initial: () => ({ name: "" }) });
+    const family1 = defineDocFamily<V1, string>({
+      kind: "app.probe-shapes",
+      version: 1,
+      scope: "session",
+      checkpointWhen: () => false,
+      family: true,
+      initial: (name) => ({ name }),
+    });
     const split = (value: V1 | Record<string, unknown>): V2 => {
       const [first = "", last = ""] = String((value as V1).name).split(" ");
       return { first, last };
@@ -728,6 +771,7 @@ try {
       kind: "app.probe-shape",
       version: 2,
       scope: "session",
+      checkpointWhen: () => false,
       initial: () => ({ first: "", last: "" }),
       migrate: (value) => split(value),
     });
@@ -735,11 +779,18 @@ try {
       kind: "app.probe-shapes",
       version: 2,
       scope: "session",
+      checkpointWhen: () => false,
       family: true,
       initial: () => ({ first: "", last: "" }),
       migrate: (value) => split(value),
     });
-    const single2Bare = defineDoc<V2>({ kind: "app.probe-shape", version: 2, scope: "session", initial: () => ({ first: "", last: "" }) });
+    const single2Bare = defineDoc<V2>({
+      kind: "app.probe-shape",
+      version: 2,
+      scope: "session",
+      checkpointWhen: () => false,
+      initial: () => ({ first: "", last: "" }),
+    });
     const throws = async (run: () => Promise<unknown>) => {
       try {
         await run();

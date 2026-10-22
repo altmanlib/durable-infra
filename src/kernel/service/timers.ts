@@ -14,13 +14,15 @@ export const MAX_EVENT_DATA_CHARS = 2000;
 export type TimerInput = { key: string; event: ScheduledEvent; at: number };
 
 /** Sleeps until `at`, then records the notice and finishes in one commit, so an event fires exactly once across restarts. */
-export const Timer = defineTask<TimerInput, { phase: "wait" }, string>({
+export const Timer = defineTask<TimerInput, { phase: "wait" } | { phase: "fire" }, string>({
   name: TIMER_TASK,
   version: 1,
   initial: () => ({ phase: "wait" }),
   phases: {
     wait: async (task, runtime, context) => {
-      await runtime.sleep(task.input.at, context);
+      await runtime.sleepUntil(task.input.at, { phase: "fire" }, context);
+    },
+    fire: async (task, runtime, context) => {
       await runtime.commit(async (tx) => {
         (await tx.doc(Notices)).items.push({ id: String(runtime.taskId), key: task.input.key, event: task.input.event, dueAt: task.input.at });
         return { status: "terminal", outcome: { status: "completed", result: "fired" } };
