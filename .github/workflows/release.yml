@@ -1,29 +1,26 @@
 name: Release
 
-# A tag `v<version>` pushed by `bun run release` publishes that version.
+# A tag `v<version>` pushed by `bun run release` creates the GitHub Release for that version; consumers install the tag from GitHub.
 on:
   push:
     tags: ['v*']
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write # npm Trusted Publishing (OIDC); also enables provenance
+      contents: write # create the GitHub Release
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json # reads the packageManager field
-      # Trusted Publishing needs npm CLI >= 11.5.1 and Node >= 22.14.
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
       - run: bun install --frozen-lockfile
       - name: The tag is the version
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
       - run: bun run verify
       - run: bun run check:package
-      - run: npm publish
+      - name: Create the GitHub Release
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

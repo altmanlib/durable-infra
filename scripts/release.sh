@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release: align main with dev, bump the version on main, tag it and push; the Release workflow publishes the tag.
+# Release: align main with dev, bump the version on main, tag it and push; the Release workflow creates the GitHub Release.
 # Usage: bun run release <patch|minor|major>   (run it on dev, with nothing uncommitted)
 set -euo pipefail
 
@@ -40,4 +40,4 @@ git push --atomic origin main "$tag"
 git switch --quiet dev
 git merge --ff-only --quiet main
 git push --quiet origin dev
-echo "pushed $tag; the Release workflow publishes it (gh run watch)"
+echo "pushed $tag; the Release workflow creates its GitHub Release (gh run watch)"
