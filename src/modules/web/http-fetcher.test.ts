@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+
 import { FetchError } from "./fetcher.ts";
 import { BROWSER_HEADERS, HttpFetcher, type HttpFetcherOptions } from "./http-fetcher.ts";
 

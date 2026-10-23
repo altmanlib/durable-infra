@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { AssistantMessage, Models, ModelThinkingLevel, UserMessage } from "@earendil-works/pi-ai";
 import {
@@ -20,6 +21,7 @@ import {
   UserEntry,
 } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
+
 import { log } from "../../platform/log.ts";
 import { SlidingWindow } from "../../platform/sliding-window.ts";
 import { EditablePrompts, KERNEL_PROMPTS, PromptCatalog } from "../prompts.ts";
@@ -28,13 +30,13 @@ import { MAX_CHANGES } from "../settings/docs.ts";
 import { Settings } from "../settings/settings.ts";
 import { ChannelMap } from "./channel-map.ts";
 import type { AgentExtension, ExtensionHost } from "./host.ts";
-import { checkCatalog, modelName, moveToModel, type SetModelResult, sameModel, selectModel } from "./model-switch.ts";
+import { checkCatalog, modelName, moveToModel, sameModel, selectModel, type SetModelResult } from "./model-switch.ts";
 import { ConversationKeys, type Notice, NoticeFeed, type ScheduledEvent } from "./notices.ts";
 import { Outbox, type PendingTurn } from "./outbox.ts";
 import { DEFAULT_RATE_LIMIT, type RateLimit } from "./rate-limit.ts";
 import { SessionReader } from "./reader.ts";
 import { isShared, moveToSharedTools, privilegedToolsHook, sharedAgent, sharedToolsOf } from "./shared-tools.ts";
-import { MAX_EVENT_DATA_CHARS, MAX_EVENT_KIND_CHARS, TIMER_TASK, TIMERS_KEY, Timer } from "./timers.ts";
+import { MAX_EVENT_DATA_CHARS, MAX_EVENT_KIND_CHARS, Timer, TIMER_TASK, TIMERS_KEY } from "./timers.ts";
 import { DEFAULT_MAX_TOOL_ROUNDS, toolBudgetHook } from "./tool-budget.ts";
 import { assistantText, ChatMessageEntry, type HistoryLine, historyLines, normalizeSpeaker, type Speaker, userContent, WindowEntry } from "./transcript.ts";
 import { type ToolActivity, TurnFeed } from "./turn-feed.ts";

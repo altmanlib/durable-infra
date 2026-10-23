@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService } from "../service/agent-service.ts";
 import { SettingsError } from "./error.ts";

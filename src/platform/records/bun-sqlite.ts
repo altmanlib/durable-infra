@@ -1,4 +1,5 @@
 import type { Database, SQLQueryBindings } from "bun:sqlite";
+
 import type { SqliteDatabase } from "kysely";
 
 /** Adapts `bun:sqlite` to Kysely's better-sqlite3-style dialect: parameters are spread, and an empty column list marks a statement that returns nothing. */

@@ -1,6 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
+
 import type { TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
+
 import { clockModule } from "../modules/clock/index.ts";
 import { giteaModule } from "../modules/gitea/index.ts";
 import { memoModule } from "../modules/memo/index.ts";
@@ -11,7 +13,7 @@ import { fauxSetup, tempDirPerTest } from "../testing/testing.ts";
 import { loadCoreConfig } from "./config.ts";
 import type { SettingSpec } from "./conversation-settings/index.ts";
 import type { Module } from "./module.ts";
-import { type Core, type OpenCoreOptions, openCore } from "./open.ts";
+import { type Core, openCore, type OpenCoreOptions } from "./open.ts";
 import { entry } from "./prompts.ts";
 import type { Change } from "./settings/change-log.ts";
 
@@ -52,7 +54,9 @@ async function toolsFor(opened: Core, key: string, options: { shared?: boolean }
       return fauxAssistantMessage("ok");
     },
   ]);
-  await (await opened.agent.send(key, "hi", "r1", options)).answer;
+  await (
+    await opened.agent.send(key, "hi", "r1", options)
+  ).answer;
   return offeredTools(seen);
 }
 
@@ -179,7 +183,9 @@ test("the application version and start time reach the modules", async () => {
       return fauxAssistantMessage("done");
     },
   ]);
-  await (await core.agent.send("k", "status", "r1")).answer;
+  await (
+    await core.agent.send("k", "status", "r1")
+  ).answer;
   expect(answer).toContain("1.2.3");
 });
 

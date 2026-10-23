@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { SlidingWindow } from "./sliding-window.ts";
 
 test("a key may start `max` inputs per window and is refused after that", () => {

@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
+
 import { FetchError } from "./fetcher.ts";
 
 /** Addresses `web_fetch` may not reach: this machine, private and shared networks, link-local, and other non-public ranges (IPv4 inside IPv6 included). */

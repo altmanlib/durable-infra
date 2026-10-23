@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { describeSearchProviderContract, type Scenario, SECRET_KEY } from "../../testing/search-contract.ts";
 import { SearchError } from "./search.ts";
 import { TavilySearch } from "./tavily.ts";

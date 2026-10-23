@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { giteaConfigFromEnv } from "./module.ts";
 
 test("Gitea is both variables or neither; the address is http(s), kept without a trailing slash", () => {

@@ -1,6 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { createModels } from "@earendil-works/pi-ai/models";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai/providers/faux";
+
 import { captureLogs, memoryChangeLog, tempDirPerTest, testPrompts } from "../../testing/testing.ts";
 import { AgentService } from "../service/agent-service.ts";
 import type { ChangeLog } from "./change-log.ts";
@@ -76,7 +78,9 @@ test("conversations moved to the configured model are noted in the application's
   const log = memoryChangeLog();
   const first = await open(log, OLD);
   faux.setResponses([() => fauxAssistantMessage("hi")]);
-  await (await first.send("chan:1", "hello", "r1")).answer;
+  await (
+    await first.send("chan:1", "hello", "r1")
+  ).answer;
   await first.close();
   opened.pop();
 

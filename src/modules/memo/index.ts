@@ -1,4 +1,5 @@
 import { section } from "@earendil-works/pi-durable";
+
 import type { Module } from "../../kernel/module.ts";
 import type { PromptSource } from "../../kernel/prompts.ts";
 import { isShared } from "../../kernel/service/shared-tools.ts";

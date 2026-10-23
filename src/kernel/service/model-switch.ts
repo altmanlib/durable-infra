@@ -1,6 +1,7 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { Models } from "@earendil-works/pi-ai";
-import { AgentDoc, type ConversationId, configure, type Harness, type ModelRef } from "@earendil-works/pi-durable";
+import { AgentDoc, configure, type ConversationId, type Harness, type ModelRef } from "@earendil-works/pi-durable";
+
 import { log } from "../../platform/log.ts";
 import type { ChangeLog } from "../settings/change-log.ts";
 import { recordChange } from "../settings/docs.ts";

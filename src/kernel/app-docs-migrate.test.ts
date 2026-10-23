@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
+
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { createRegistry, Harness } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
+
 import { tempDirPerTest } from "../testing/testing.ts";
 import { appDoc, appDocFamily, checkpoint } from "./app-docs.ts";
 

@@ -3,10 +3,12 @@ import { afterAll, beforeEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import type { TranscriptContext } from "@earendil-works/pi-ai";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { fauxProvider } from "@earendil-works/pi-ai/providers/faux";
 import { GenerationTask, hook } from "@earendil-works/pi-durable";
+
 import { ConversationSettings, SettingCatalog } from "../kernel/conversation-settings/index.ts";
 import type { BaseDeps } from "../kernel/module.ts";
 import {

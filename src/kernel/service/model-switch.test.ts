@@ -1,6 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { createModels } from "@earendil-works/pi-ai/models";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai/providers/faux";
+
 import { captureLogs, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService } from "./agent-service.ts";
 import { TIMERS_KEY } from "./timers.ts";
@@ -33,7 +35,9 @@ async function talk(model: typeof OLD, keys: string[]): Promise<void> {
   const service = await open(model);
   for (const key of keys) {
     faux.setResponses([answeredBy()]);
-    await (await service.send(key, "hi", `${key}-r1`)).answer;
+    await (
+      await service.send(key, "hi", `${key}-r1`)
+    ).answer;
   }
   await closeAll();
 }
@@ -58,7 +62,9 @@ test("a conversation created with one model answers with the configured one afte
 test("the conversation that owns the scheduled tasks is moved and counted too", async () => {
   const first = await open(OLD);
   faux.setResponses([answeredBy()]);
-  await (await first.send("feishu:1", "hi", "r1")).answer;
+  await (
+    await first.send("feishu:1", "hi", "r1")
+  ).answer;
   await first.schedule("feishu:1", Date.now() + 3_600_000, { kind: "test", data: "" });
   await closeAll();
 

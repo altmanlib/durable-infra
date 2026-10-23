@@ -1,7 +1,9 @@
 import { Database } from "bun:sqlite";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+
 import { Kysely, type Logger, SqliteDialect } from "kysely";
+
 import { log } from "../log.ts";
 import { bunSqlite } from "./bun-sqlite.ts";
 

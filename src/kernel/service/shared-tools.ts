@@ -3,8 +3,8 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import {
   AgentDoc,
-  type ConversationId,
   configure,
+  type ConversationId,
   type DocumentReader,
   type Harness,
   hook,
@@ -13,6 +13,7 @@ import {
   type ToolRegistration,
   ToolTask,
 } from "@earendil-works/pi-durable";
+
 import { log } from "../../platform/log.ts";
 import type { PromptSource } from "../prompts.ts";
 import { ConversationKeys } from "./notices.ts";

@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { captureLogs, fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService } from "../service/agent-service.ts";
 import { MAX_DENIED } from "./access.ts";

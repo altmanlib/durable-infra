@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { tempDirPerTest } from "../testing/testing.ts";
-import { log, setLogSink } from "./log.ts";
 import { LogFile, logToFile } from "./log-file.ts";
+import { log, setLogSink } from "./log.ts";
 
 const dir = tempDirPerTest("log-file-");
 const read = (name = "app.log") => readFileSync(join(dir(), name), "utf8");

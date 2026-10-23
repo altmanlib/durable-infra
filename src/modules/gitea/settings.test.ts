@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { FAKE_GITEA_TOKEN, type FakeGitea, startFakeGitea } from "../../testing/fake-gitea.ts";
 import { captureLogs } from "../../testing/testing.ts";
 import { GiteaHttpClient } from "./client.ts";

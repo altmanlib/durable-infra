@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { Usage } from "@earendil-works/pi-ai";
+
 import { ConversationKeys } from "../../kernel/service/notices.ts";
 import { captureLogs, defaultPrompts, toolDeps } from "../../testing/testing.ts";
 import { builtinTools } from "../../testing/tools.ts";

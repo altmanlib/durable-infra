@@ -1,6 +1,7 @@
 /** The service log on disk, rotated by size so its total stays bounded; a failing disk is reported once on stderr and never reaches the caller. */
 import { closeSync, fstatSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from "node:fs";
 import { join } from "node:path";
+
 import { formatLine, type LogLevel, setLogSink } from "./log.ts";
 
 export const LOG_FILE_MAX_BYTES = 10 * 1024 * 1024;

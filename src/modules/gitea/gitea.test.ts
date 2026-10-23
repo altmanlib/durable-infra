@@ -1,6 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { LiveDoc } from "@earendil-works/pi-durable";
+
 import { ConversationSettings, SettingCatalog, type SettingSpec, type SettingStore } from "../../kernel/conversation-settings/index.ts";
 import { openSettingStore } from "../../kernel/conversation-settings/records/index.ts";
 import { ConversationKeys } from "../../kernel/service/notices.ts";

@@ -1,5 +1,6 @@
 // All modules' tools built from plain dependencies, for tests that open a service directly instead of through `openCore`.
 import type { ToolRegistration } from "@earendil-works/pi-durable";
+
 import { BUILTIN_EXTENSION } from "../kernel/open.ts";
 import type { AgentExtension } from "../kernel/service/host.ts";
 import { sharedToolNames } from "../kernel/tool-catalog.ts";

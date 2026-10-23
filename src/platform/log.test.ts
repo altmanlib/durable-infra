@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { formatLine, log, setLogSink } from "./log.ts";
 
 const AT = new Date("2026-10-06T03:00:00.000Z");

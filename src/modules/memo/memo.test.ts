@@ -1,6 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { LiveDoc } from "@earendil-works/pi-durable";
+
 import { ConversationKeys } from "../../kernel/service/notices.ts";
 import { Outbox } from "../../kernel/service/outbox.ts";
 import { Records } from "../../platform/records/records.ts";

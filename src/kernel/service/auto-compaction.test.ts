@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import type { AssistantMessage, TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
+
 import { fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService } from "../index.ts";
 import { messageText } from "./transcript.ts";

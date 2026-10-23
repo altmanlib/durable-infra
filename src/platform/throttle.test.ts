@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { Throttle } from "./throttle.ts";
 
 test("the first time is allowed, then nothing until the interval is over, and each key has its own", () => {

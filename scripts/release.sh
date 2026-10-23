@@ -24,7 +24,7 @@ git fetch --quiet origin
 git merge-base --is-ancestor origin/main dev || fail "main has commits dev lacks: merge origin/main into dev first"
 git merge-base --is-ancestor origin/dev dev || fail "dev is behind origin/dev: pull first"
 
-bun run verify
+bun run ci
 bun run check:package
 bun run probe
 

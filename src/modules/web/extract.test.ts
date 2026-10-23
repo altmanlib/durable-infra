@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { extractContent } from "./extract.ts";
 
 const filler = "The quick brown fox jumps over the lazy dog. ".repeat(12);

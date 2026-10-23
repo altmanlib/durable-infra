@@ -1,4 +1,5 @@
 import { type Kysely, sql } from "kysely";
+
 import type { MemoSchema } from "./schema.ts";
 
 /** The longest name of an entry, after normalizing, in UTF-16 code units. */

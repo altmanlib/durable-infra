@@ -1,6 +1,7 @@
 // The executable form of the search contract. A provider's test supplies a way to build
 // the provider on a fake backend that behaves as a scenario says; this file checks the rules every provider keeps.
 import { describe, expect, test } from "bun:test";
+
 import { MAX_RESULTS_LIMIT, MAX_SNIPPET_CHARS, SearchError, type SearchErrorKind, type SearchProvider } from "../modules/web/search.ts";
 
 export type RawHit = { title?: unknown; url?: unknown; snippet?: unknown };

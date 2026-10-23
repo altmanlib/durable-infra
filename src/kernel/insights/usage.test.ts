@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
+
 import type { Message } from "@earendil-works/pi-ai";
 import type { EntryRecord, UsageState } from "@earendil-works/pi-durable";
-import { buildUsageReport, dayOf, isDay, type SpendRecord, spendOf, type UsageCounters } from "./usage.ts";
+
+import { buildUsageReport, dayOf, isDay, spendOf, type SpendRecord, type UsageCounters } from "./usage.ts";
 
 const usage = (input: number, output: number, cacheRead = 0, cacheWrite = 0) => ({
   input,

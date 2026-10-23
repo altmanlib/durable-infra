@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { Records } from "../../platform/records/records.ts";
 import { captureLogs } from "../../testing/testing.ts";
 import { ConversationSettings, openConversationSettings, SettingCatalog, type SettingSpec } from "./index.ts";

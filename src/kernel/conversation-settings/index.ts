@@ -7,13 +7,7 @@ import type { SettingSpec } from "./spec.ts";
 
 export { SettingCatalog } from "./catalog.ts";
 export type { SettingStore, StoredSetting } from "./records/index.ts";
-export {
-  ConversationSettings,
-  type ConversationSettingsOptions,
-  type SettingClearResult,
-  type SettingSetResult,
-  type SettingView,
-} from "./settings.ts";
+export { ConversationSettings, type ConversationSettingsOptions, type SettingClearResult, type SettingSetResult, type SettingView } from "./settings.ts";
 export {
   CHECK_TIMEOUT_MS,
   DEFAULT_SETTING_CHARS,

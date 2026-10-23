@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+
 import type { AssistantMessage, Message } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
+
 import { fauxSetup, tempDirPerTest, toolDeps } from "../../testing/testing.ts";
 import { builtinExtensions } from "../../testing/tools.ts";
 import { AgentService } from "../index.ts";

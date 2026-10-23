@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import type { AssistantMessage, TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
+
 import { AgentService, type Notice } from "../../kernel/index.ts";
 import { formatLocal } from "../../platform/local-time.ts";
 import { captureLogs, fauxSetup, tempDirPerTest, toolDeps } from "../../testing/testing.ts";
@@ -89,7 +91,9 @@ const textOf = (notice: Notice) => ("text" in notice ? notice.text : undefined);
 
 test("a reminder that came due while the process was down fires after reopen and survives until confirmed", async () => {
   faux.setResponses(scheduleThenQuote(() => [{ at: inMs(900), text: "stand up" }]));
-  await (await (service as AgentService).send("feishu:42", "remind me", "r1")).answer;
+  await (
+    await (service as AgentService).send("feishu:42", "remind me", "r1")
+  ).answer;
   await (service as AgentService).close();
   service = undefined;
   await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -199,7 +203,9 @@ test("setting and cancelling a reminder is logged", async () => {
     faux.setResponses(rounds([{ name: "set_reminder", args: { at: inMs(60_000), text: "mine" } }], [{ name: "list_reminders", args: {} }]));
     id = /(\d+): [^\n]* — mine/.exec(await (await target.send("feishu:1", "set", "r1")).answer)?.[1] ?? "";
     faux.setResponses(rounds([{ name: "cancel_reminder", args: { id } }]));
-    await (await target.send("feishu:1", "cancel", "r2")).answer;
+    await (
+      await target.send("feishu:1", "cancel", "r2")
+    ).answer;
   });
   const text = lines.map((entry) => entry.line).join("\n");
   expect(text).toMatch(/ reminder\.set key=feishu:1 at=\S+ waiting=1/);

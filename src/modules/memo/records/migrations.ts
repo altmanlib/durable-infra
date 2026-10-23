@@ -1,4 +1,5 @@
 import { sql } from "kysely";
+
 import { inTransaction, type Migrations } from "../../../platform/records/migrations.ts";
 
 /** The shape of the memo's table, in the order the steps were written (rules at `Migrations`). */

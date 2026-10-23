@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { checkAddress, isPublicAddress } from "./address-guard.ts";
 import { FetchError } from "./fetcher.ts";
 

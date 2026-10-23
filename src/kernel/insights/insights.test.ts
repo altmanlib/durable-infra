@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import { type AssistantMessage, type TranscriptContext, Type } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { defineExtension, defineTool } from "@earendil-works/pi-durable";
+
 import { fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService, Insights, QueryError } from "../index.ts";
 import { messageText } from "../service/transcript.ts";
@@ -51,8 +53,12 @@ afterEach(async () => {
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 
 test("usage adds up model responses and tool spend by day, and the open range matches Durable's total", async () => {
-  await (await service.send("a", "hello", "r1")).answer;
-  await (await service.send("b", "spend", "r2")).answer;
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
+  await (
+    await service.send("b", "spend", "r2")
+  ).answer;
   expect(await service.compact("a")).toBe("compacted");
 
   const report = await new Insights(service.reader, { timeZone: "UTC" }).usage();
@@ -69,7 +75,9 @@ test("usage adds up model responses and tool spend by day, and the open range ma
 });
 
 test("today is resolved in the report time zone", async () => {
-  await (await service.send("a", "hello", "r1")).answer;
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
   const now = () => new Date();
   const manila = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(now());
   const report = await new Insights(service.reader, { timeZone: "Asia/Manila", now }).usage({ from: "today", to: "today" });
@@ -89,8 +97,12 @@ test("malformed or reversed dates are the caller's mistake", async () => {
 });
 
 test("usage of one channel key counts that key's conversations alone, and the keys add up to the whole", async () => {
-  await (await service.send("a", "hello", "r1")).answer;
-  await (await service.send("b", "spend", "r2")).answer;
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
+  await (
+    await service.send("b", "spend", "r2")
+  ).answer;
   expect(await service.compact("a")).toBe("compacted");
   const insights = new Insights(service.reader, { timeZone: "UTC" });
 
@@ -105,22 +117,30 @@ test("usage of one channel key counts that key's conversations alone, and the ke
 });
 
 test("usage of a key with no conversation is an empty report", async () => {
-  await (await service.send("a", "hello", "r1")).answer;
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
   const report = await new Insights(service.reader, { timeZone: "UTC" }).usage({}, { key: "nobody" });
   expect(report.days).toEqual([]);
   expect(report.total.totalTokens).toBe(0);
 });
 
 test("the empty key names no conversation: it asks for nothing, not for everything", async () => {
-  await (await service.send("a", "hello", "r1")).answer;
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
   const report = await new Insights(service.reader, { timeZone: "UTC" }).usage({}, { key: "" });
   expect(report.days).toEqual([]);
   expect(report.total.totalTokens).toBe(0);
 });
 
 test("the conversations are listed by key, most recent first, and are the same as the service lists", async () => {
-  await (await service.send("a", "hello", "r1")).answer;
-  await (await service.send("b", "hello", "r2")).answer;
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
+  await (
+    await service.send("b", "hello", "r2")
+  ).answer;
   const listed = await new Insights(service.reader).conversations();
   expect(listed.map((info) => info.key).sort()).toEqual(["a", "b"]);
   expect(listed).toEqual(await service.conversations());

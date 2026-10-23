@@ -2,6 +2,7 @@
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { awaitWithContext, BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { type AssistantMessage, Type } from "@earendil-works/pi-ai";
 import { createModels } from "@earendil-works/pi-ai/models";
@@ -10,11 +11,11 @@ import {
   AgentDoc,
   AssistantEntry,
   CompactionEntry,
+  configure,
   ConversationBusy,
   type ConversationId,
-  type Cursor,
-  configure,
   createRegistry,
+  type Cursor,
   defineDoc,
   defineDocFamily,
   defineExtension,

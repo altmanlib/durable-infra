@@ -1,5 +1,6 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { Harness } from "@earendil-works/pi-durable";
+
 import { appDoc, appDocFamily, checkpoint } from "../app-docs.ts";
 
 const context = BACKGROUND_CONTEXT;

@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { Records } from "../../../platform/records/records.ts";
 import { MAX_MEMO_BODY_CHARS, MAX_MEMO_ENTRIES, type MemoEntries, normalizeMemoName, previewOf } from "./entries.ts";
 import { openMemoEntries } from "./index.ts";

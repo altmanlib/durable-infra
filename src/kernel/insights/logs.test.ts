@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { formatLine } from "../../platform/log.ts";
+
 import { LogFile } from "../../platform/log-file.ts";
+import { formatLine } from "../../platform/log.ts";
 import { tempDirPerTest } from "../../testing/testing.ts";
 import { QueryError } from "./insights.ts";
 import { type LogPage, type LogQuery, LogReader, parseEntry } from "./logs.ts";

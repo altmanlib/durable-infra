@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { Records } from "../../../platform/records/records.ts";
 import { openSettingStore, type SettingRows } from "./index.ts";
 

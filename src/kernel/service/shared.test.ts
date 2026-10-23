@@ -1,10 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { createRegistry, Harness } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
+
 import { GITEA_ISSUE_CREATE, type GiteaTools } from "../../modules/gitea/gitea.ts";
 import { GiteaHttpClient, giteaRepoSetting } from "../../modules/gitea/index.ts";
 import { MEMO_TOOLS } from "../../modules/memo/memo.ts";
@@ -120,8 +122,12 @@ async function open(sharedTools: readonly string[] | null = SHARED_TOOLS, privil
 
 test("a shared conversation without privileged tools offers only the shared tools; others keep every tool, reminders included", async () => {
   const agents = await open(SHARED_TOOLS, null);
-  await (await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })).answer;
-  await (await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })).answer;
+  await (
+    await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })
+  ).answer;
+  await (
+    await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })
+  ).answer;
   // web_search is not installed here (no search service), so it is left out.
   expect(offered[0]?.sort()).toEqual(["app_status", "current_time", "delete_memo", "get_memo", "list_memos", "set_memo", "web_fetch"]);
   expect(offered[1]).toEqual(expect.arrayContaining(["current_time", "set_reminder", "list_reminders", "cancel_reminder", "web_fetch"]));
@@ -135,21 +141,31 @@ test("a shared conversation without privileged tools offers only the shared tool
 test("a shared conversation first made by a record is restricted too, and keeps it for later questions", async () => {
   const agents = await open(SHARED_TOOLS, null);
   await agents.record("group", "earlier talk", "r1", { speaker: { id: "ou_b" }, shared: true });
-  await (await agents.send("group", "hi", "r2", { speaker: { id: "ou_a" }, shared: true })).answer;
-  await (await agents.send("group", "again", "r3", { speaker: { id: "ou_a" } })).answer;
+  await (
+    await agents.send("group", "hi", "r2", { speaker: { id: "ou_a" }, shared: true })
+  ).answer;
+  await (
+    await agents.send("group", "again", "r3", { speaker: { id: "ou_a" } })
+  ).answer;
   expect(offered.map((names) => names.includes("set_reminder"))).toEqual([false, false]);
 });
 
 test("without a shared list a shared conversation has every tool", async () => {
   const agents = await open(null, null);
-  await (await agents.send("group", "hi", "r1", { shared: true })).answer;
+  await (
+    await agents.send("group", "hi", "r1", { shared: true })
+  ).answer;
   expect(offered[0]).toContain("set_reminder");
 });
 
 test("a shared conversation offers the privileged tools too, and says who may use them; a private one does not get the shared notice", async () => {
   const agents = await open();
-  await (await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })).answer;
-  await (await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })).answer;
+  await (
+    await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })
+  ).answer;
+  await (
+    await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })
+  ).answer;
   expect(offered[0]?.sort()).toEqual(GROUP_TOOLS);
   expect(sections[0]).toContain("shared");
   expect(sections[0]).not.toContain("no-reminders");
@@ -160,8 +176,12 @@ test("in a shared conversation a privileged asker may set a reminder; anyone els
   const agents = await open();
   script = remindOnce;
   try {
-    await (await agents.send("group", "remind me", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })).answer;
-    await (await agents.send("group", "remind me too", "r2", { speaker: { id: "ou_guest" }, shared: true })).answer;
+    await (
+      await agents.send("group", "remind me", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })
+    ).answer;
+    await (
+      await agents.send("group", "remind me too", "r2", { speaker: { id: "ou_guest" }, shared: true })
+    ).answer;
   } finally {
     script = answerOk;
   }
@@ -174,7 +194,9 @@ test("a private conversation is not checked: every asker may set a reminder", as
   const agents = await open();
   script = remindOnce;
   try {
-    await (await agents.send("private", "remind me", "r1", { speaker: { id: "ou_guest" } })).answer;
+    await (
+      await agents.send("private", "remind me", "r1", { speaker: { id: "ou_guest" } })
+    ).answer;
   } finally {
     script = answerOk;
   }
@@ -183,14 +205,20 @@ test("a private conversation is not checked: every asker may set a reminder", as
 
 test("a shared conversation made before the privileged tools were added gets them at the next open", async () => {
   const first = await open(SHARED_TOOLS, null);
-  await (await first.send("group", "hi", "r1", { shared: true })).answer;
+  await (
+    await first.send("group", "hi", "r1", { shared: true })
+  ).answer;
   await first.close();
   service = undefined;
   expect(offered[0]).not.toContain("set_reminder");
 
   const second = await open();
-  await (await second.send("group", "again", "r2", { shared: true })).answer;
-  await (await second.send("private", "hi", "r3")).answer;
+  await (
+    await second.send("group", "again", "r2", { shared: true })
+  ).answer;
+  await (
+    await second.send("private", "hi", "r3")
+  ).answer;
   expect(offered[1]?.sort()).toEqual(GROUP_TOOLS);
   // The private conversation keeps every tool, the unrestricted kind, but the memo.
   expect(offered[2]).toEqual(expect.arrayContaining(["set_reminder", "web_fetch", "current_time"]));
@@ -200,8 +228,12 @@ test("a shared conversation made before the privileged tools were added gets the
 test("a shared conversation made before the memo gets its tools at the next open, once; a private one never does", async () => {
   const before = SHARED_TOOLS.filter((name) => !(MEMO_TOOLS as readonly string[]).includes(name));
   const first = await open(before);
-  await (await first.send("group", "hi", "r1", { shared: true })).answer;
-  await (await first.send("private", "hi", "r2")).answer;
+  await (
+    await first.send("group", "hi", "r1", { shared: true })
+  ).answer;
+  await (
+    await first.send("private", "hi", "r2")
+  ).answer;
   await first.close();
   service = undefined;
   expect(offered[0]).not.toContain("set_memo");
@@ -211,8 +243,12 @@ test("a shared conversation made before the memo gets its tools at the next open
     second = await open();
   });
   expect(moving.filter(({ line }) => line.includes("agent.shared_tools_moved")).length).toBe(1);
-  await (await second.send("group", "again", "r3", { shared: true })).answer;
-  await (await second.send("private", "again", "r4")).answer;
+  await (
+    await second.send("group", "again", "r3", { shared: true })
+  ).answer;
+  await (
+    await second.send("private", "again", "r4")
+  ).answer;
   expect(offered[2]).toEqual(expect.arrayContaining([...MEMO_TOOLS]));
   for (const name of MEMO_TOOLS) expect(offered[3]).not.toContain(name);
   await second.close();
@@ -235,9 +271,13 @@ test("anyone in a shared conversation may write the memo; the writer is kept whe
         : fauxAssistantMessage(fauxToolCall("set_memo", { name, body: `# ${name}` }), { stopReason: "toolUse" });
   try {
     script = writeOnce("项目概况");
-    await (await agents.send("group", "记一下", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })).answer;
+    await (
+      await agents.send("group", "记一下", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })
+    ).answer;
     script = writeOnce("买进表");
-    await (await agents.send("group", "也记一下", "r2", { speaker: { id: "ou_guest" }, shared: true })).answer;
+    await (
+      await agents.send("group", "也记一下", "r2", { speaker: { id: "ou_guest" }, shared: true })
+    ).answer;
   } finally {
     script = answerOk;
   }
@@ -260,8 +300,12 @@ async function storedOutbox() {
 
 test("every input of a group is matched to its outbox item, a private one is not: it pays no extra commit", async () => {
   const agents = await open();
-  await (await agents.send("group", "hi", "r1", { speaker: { id: "ou_guest" }, shared: true })).answer;
-  await (await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })).answer;
+  await (
+    await agents.send("group", "hi", "r1", { speaker: { id: "ou_guest" }, shared: true })
+  ).answer;
+  await (
+    await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })
+  ).answer;
   await agents.close();
   service = undefined;
   const items = await storedOutbox();
@@ -275,7 +319,9 @@ test("an input replayed after a restart, without `shared`, is still matched: the
   records = await Records.open(":memory:");
   memos = await openMemoEntries(records);
   const first = await open();
-  await (await first.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })).answer;
+  await (
+    await first.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })
+  ).answer;
   await first.close();
   service = undefined;
 
@@ -296,7 +342,9 @@ test("an input replayed after a restart, without `shared`, is still matched: the
     // What replayPending does: the stored speaker, no `shared`.
     const item = (await second.pending(() => true)).find((pending) => pending.requestId === "r2");
     expect(item?.speaker).toEqual({ id: "ou_guest", name: "Guest" });
-    await (await second.send("group", item?.text ?? "", "r2", { speaker: { id: "ou_guest", name: "Guest" } })).answer;
+    await (
+      await second.send("group", item?.text ?? "", "r2", { speaker: { id: "ou_guest", name: "Guest" } })
+    ).answer;
   } finally {
     script = answerOk;
   }
@@ -339,8 +387,12 @@ const callOnce =
 test("with a setting registered a group is offered the three settings tools and told about them; a private conversation is offered none", async () => {
   settings = await withSetting();
   const agents = await open();
-  await (await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })).answer;
-  await (await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })).answer;
+  await (
+    await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })
+  ).answer;
+  await (
+    await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })
+  ).answer;
   expect(offered[0]?.sort()).toEqual([...GROUP_TOOLS, ...SETTINGS_TOOLS].sort());
   expect(sections[0]).toContain("settings");
   for (const name of SETTINGS_TOOLS) expect(offered[1]).not.toContain(name);
@@ -350,8 +402,12 @@ test("with a setting registered a group is offered the three settings tools and 
 test("with no setting registered, as in production, nothing changes: no settings tools and no settings notice", async () => {
   settings = noSettings();
   const agents = await open();
-  await (await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })).answer;
-  await (await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })).answer;
+  await (
+    await agents.send("group", "hi", "r1", { speaker: { id: "ou_a" }, shared: true })
+  ).answer;
+  await (
+    await agents.send("private", "hi", "r2", { speaker: { id: "ou_a" } })
+  ).answer;
   expect(offered[0]?.sort()).toEqual(GROUP_TOOLS);
   for (const names of offered) for (const name of SETTINGS_TOOLS) expect(names).not.toContain(name);
   for (const keys of sections) expect(keys).not.toContain("settings");
@@ -364,13 +420,21 @@ test("in a group anyone may list the settings; only a privileged asker may set o
   try {
     lines = await captureLogs(async () => {
       script = callOnce("set_setting", { name: "test.word", value: "Hello" });
-      await (await agents.send("group", "set it", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })).answer;
+      await (
+        await agents.send("group", "set it", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })
+      ).answer;
       script = callOnce("set_setting", { name: "test.word", value: "evil" });
-      await (await agents.send("group", "set it", "r2", { speaker: { id: "ou_guest" }, shared: true })).answer;
+      await (
+        await agents.send("group", "set it", "r2", { speaker: { id: "ou_guest" }, shared: true })
+      ).answer;
       script = callOnce("clear_setting", { name: "test.word" });
-      await (await agents.send("group", "clear it", "r3", { speaker: { id: "ou_guest" }, shared: true })).answer;
+      await (
+        await agents.send("group", "clear it", "r3", { speaker: { id: "ou_guest" }, shared: true })
+      ).answer;
       script = callOnce("list_settings", {});
-      await (await agents.send("group", "show", "r4", { speaker: { id: "ou_guest" }, shared: true })).answer;
+      await (
+        await agents.send("group", "show", "r4", { speaker: { id: "ou_guest" }, shared: true })
+      ).answer;
     });
   } finally {
     script = answerOk;
@@ -387,7 +451,9 @@ test("a group made with no setting registered gets the settings tools when one i
   const moves = (lines: { line: string }[]) => lines.filter(({ line }) => line.includes("agent.shared_tools_moved")).length;
   settings = noSettings();
   const first = await open();
-  await (await first.send("group", "hi", "r1", { shared: true })).answer;
+  await (
+    await first.send("group", "hi", "r1", { shared: true })
+  ).answer;
   await first.close();
   service = undefined;
   expect(offered[0]?.sort()).toEqual(GROUP_TOOLS);
@@ -402,7 +468,9 @@ test("a group made with no setting registered gets the settings tools when one i
     ),
   ).toBe(1);
   if (!second) throw new Error("not opened");
-  await (await second.send("group", "again", "r2", { shared: true })).answer;
+  await (
+    await second.send("group", "again", "r2", { shared: true })
+  ).answer;
   expect(offered[1]).toEqual(expect.arrayContaining([...SETTINGS_TOOLS]));
   await second.close();
   service = undefined;
@@ -420,7 +488,9 @@ test("a group made with no setting registered gets the settings tools when one i
     ),
   ).toBe(1);
   if (!third) throw new Error("not opened");
-  await (await third.send("group", "once more", "r3", { shared: true })).answer;
+  await (
+    await third.send("group", "once more", "r3", { shared: true })
+  ).answer;
   expect(offered.at(-1)?.sort()).toEqual(GROUP_TOOLS);
   await third.close();
   service = undefined;
@@ -439,11 +509,17 @@ test("with Gitea a group is offered the issue tool and anyone may file one, sign
   const agents = await open();
   try {
     script = callOnce("set_setting", { name: "gitea.repo", value: "team/app" });
-    await (await agents.send("group", "issue 记到 team/app", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })).answer;
+    await (
+      await agents.send("group", "issue 记到 team/app", "r1", { speaker: { id: "ou_boss" }, shared: true, privileged: true })
+    ).answer;
     script = callOnce(GITEA_ISSUE_CREATE, { title: "登录页报错", body: "背景" });
-    await (await agents.send("group", "记个 issue", "r2", { speaker: { id: "ou_guest", name: "Guest" }, shared: true })).answer;
+    await (
+      await agents.send("group", "记个 issue", "r2", { speaker: { id: "ou_guest", name: "Guest" }, shared: true })
+    ).answer;
     script = answerOk;
-    await (await agents.send("private", "hi", "r3", { speaker: { id: "ou_a" } })).answer;
+    await (
+      await agents.send("private", "hi", "r3", { speaker: { id: "ou_a" } })
+    ).answer;
   } finally {
     script = answerOk;
   }

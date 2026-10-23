@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { fauxSetup, testPrompts, toolDeps } from "../../testing/testing.ts";
 import { tavilyApiKeyFromEnv, webModule } from "./index.ts";
 import type { SearchProvider } from "./search.ts";

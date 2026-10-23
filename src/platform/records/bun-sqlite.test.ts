@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
+
 import { bunSqlite } from "./bun-sqlite.ts";
 
 test("the adapter hands Kysely what its SQLite dialect asks of a driver: parameters in an array, and which statements return rows", () => {

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { SettingsError, type SettingsErrorKind } from "./error.ts";
 
 // A channel with a kind of its own, such as "no such group", throws it as a SettingsError so that one handler catches

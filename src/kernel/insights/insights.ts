@@ -1,8 +1,9 @@
 import type { UsageState } from "@earendil-works/pi-durable";
+
 import { log } from "../../platform/log.ts";
 import type { ConversationInfo } from "../service/agent-service.ts";
 import type { SessionReader } from "../service/reader.ts";
-import { buildUsageReport, type DayRange, dayOf, isDay, type SpendRecord, spendOf, type UsageReport } from "./usage.ts";
+import { buildUsageReport, dayOf, type DayRange, isDay, spendOf, type SpendRecord, type UsageReport } from "./usage.ts";
 
 /** A query its caller got wrong, such as a malformed date; the message says what to fix. */
 export class QueryError extends Error {

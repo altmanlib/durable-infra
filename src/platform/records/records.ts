@@ -1,5 +1,6 @@
 import { type Kysely, type LogEvent, sql } from "kysely";
 import { Migrator } from "kysely/migration";
+
 import { log } from "../log.ts";
 import { type BareDb, openDatabase } from "./database.ts";
 import type { Migrations } from "./migrations.ts";

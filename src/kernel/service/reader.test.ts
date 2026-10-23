@@ -1,9 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
 import { AssistantEntry, createRegistry, type EntryRecord, Harness } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
+
 import { fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { SessionReader } from "./reader.ts";
 

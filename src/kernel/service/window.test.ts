@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import type { AssistantMessage, TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
+
 import { fauxSetup, tempDirPerTest, toolDeps } from "../../testing/testing.ts";
 import { builtinExtensions } from "../../testing/tools.ts";
 import { AgentService } from "../index.ts";
@@ -52,7 +54,9 @@ test("over keep + slack messages the context starts at the keep-th message from 
   expect(await agents.keepRecent("group", 10, 5)).toBe("moved");
   // Asked again before anything new: there are 10 now, nothing to move.
   expect(await agents.keepRecent("group", 10, 5)).toBe("kept");
-  await (await agents.send("group", "q1", "q1", { speaker: { id: "ou_b" }, shared: true })).answer;
+  await (
+    await agents.send("group", "q1", "q1", { speaker: { id: "ou_b" }, shared: true })
+  ).answer;
   expect(users(requests[0])).toEqual(["m7", "m8", "m9", "m10", "m11", "m12", "m13", "m14", "m15", "m16", "q1"]);
   // The older ones stay in storage: the history still lists them.
   expect((await agents.history("group", 100)).map((line) => line.text)).toContain("m1");
@@ -62,10 +66,14 @@ test("a question counts as a message, the window moves again later, and what lef
   const agents = await open();
   await recordMany(agents, 1, 16);
   await agents.keepRecent("group", 10, 5);
-  await (await agents.send("group", "q1", "q1", { shared: true })).answer;
+  await (
+    await agents.send("group", "q1", "q1", { shared: true })
+  ).answer;
   await recordMany(agents, 17, 21);
   expect(await agents.keepRecent("group", 10, 5)).toBe("moved");
-  await (await agents.send("group", "q2", "q2", { shared: true })).answer;
+  await (
+    await agents.send("group", "q2", "q2", { shared: true })
+  ).answer;
   // m7..m16, q1, m17..m21 were 16; the newest 10 of them, then q2.
   expect(users(requests.at(-1))).toEqual(["m13", "m14", "m15", "m16", "q1", "m17", "m18", "m19", "m20", "m21", "q2"]);
 });
@@ -77,10 +85,14 @@ test("the window never starts inside a tool round: the start is a user message, 
       : fauxAssistantMessage(fauxToolCall("current_time", {}), { stopReason: "toolUse" }),
   );
   await recordMany(agents, 1, 12);
-  await (await agents.send("group", "what time is it", "q1", { shared: true })).answer;
+  await (
+    await agents.send("group", "what time is it", "q1", { shared: true })
+  ).answer;
   await recordMany(agents, 13, 16);
   expect(await agents.keepRecent("group", 5, 0)).toBe("moved");
-  await (await agents.send("group", "q2", "q2", { shared: true })).answer;
+  await (
+    await agents.send("group", "q2", "q2", { shared: true })
+  ).answer;
   const request = requests.at(-2);
   const roles = (request?.messages ?? []).filter((message) => message.role !== "system").map((message) => message.role);
   expect(roles[0]).toBe("user");

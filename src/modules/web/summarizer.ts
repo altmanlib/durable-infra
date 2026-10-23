@@ -1,5 +1,6 @@
 import type { Usage } from "@earendil-works/pi-ai";
 import type { Models } from "@earendil-works/pi-ai/models";
+
 import type { PromptSource } from "../../kernel/prompts.ts";
 
 /** The model call behind an answer failed or gave nothing usable. Carries the spend, which still counts. */

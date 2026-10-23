@@ -1,10 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context";
 import type { TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
 import type { JsonObject, StoredDocument } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
+
 import { fauxSetup, tempDirPerTest } from "../testing/testing.ts";
 import { AgentService } from "./index.ts";
 
@@ -47,7 +49,9 @@ test("after many answered turns the outbox is one empty base: no past turn, and 
     rateLimit: { max: 1000, windowMs: 60_000 },
   });
   for (let turn = 1; turn <= 60; turn++) {
-    await (await service.send("feishu:1", `secret ${turn}`, `r${turn}`)).answer;
+    await (
+      await service.send("feishu:1", `secret ${turn}`, `r${turn}`)
+    ).answer;
     await service.delivered("feishu:1", `r${turn}`);
   }
   await service.close();
@@ -66,9 +70,13 @@ test("an input still owed survives the checkpoints, and the outbox stays short t
     rateLimit: { max: 1000, windowMs: 60_000 },
   });
   // Never confirmed: it stays in the outbox while 120 other turns come and go.
-  await (await service.send("terminal:owed", "still owed", "owed")).answer;
+  await (
+    await service.send("terminal:owed", "still owed", "owed")
+  ).answer;
   for (let turn = 1; turn <= 120; turn++) {
-    await (await service.send("feishu:1", `t ${turn}`, `r${turn}`)).answer;
+    await (
+      await service.send("feishu:1", `t ${turn}`, `r${turn}`)
+    ).answer;
     await service.delivered("feishu:1", `r${turn}`);
   }
   await service.close();

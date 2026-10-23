@@ -1,5 +1,6 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { Harness, Storage } from "@earendil-works/pi-durable";
+
 import { log } from "../../platform/log.ts";
 import type { EditablePrompts, PromptEffect, PromptEntry } from "../prompts.ts";
 import { AccessList } from "./access.ts";

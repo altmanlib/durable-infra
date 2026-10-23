@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import { captureLogs, fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService, isEvent, type Notice, startNotices } from "../index.ts";
 

@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
+
 import { defaultPrompts } from "../../testing/testing.ts";
 import { webContentSection } from "./web-content.ts";
 

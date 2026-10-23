@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+
 import { Glob } from "bun";
 import ts from "typescript";
-import { type Import, isTest, violation, ZONES, zoneOf } from "./architecture.ts";
+
+import { type Import, isTest, violation, zoneOf, ZONES } from "./architecture.ts";
 
 const SRC = new URL("./", import.meta.url).pathname;
 

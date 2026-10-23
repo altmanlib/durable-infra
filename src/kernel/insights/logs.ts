@@ -2,8 +2,9 @@
 import { createHash } from "node:crypto";
 import { type FileHandle, open } from "node:fs/promises";
 import { join } from "node:path";
-import type { LogLevel } from "../../platform/log.ts";
+
 import { LOG_FILE_COUNT, logFileName } from "../../platform/log-file.ts";
+import type { LogLevel } from "../../platform/log.ts";
 import { QueryError } from "./insights.ts";
 
 export type LogEntry = {

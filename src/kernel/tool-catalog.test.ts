@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { clockModule } from "../modules/clock/index.ts";
 import { giteaModule } from "../modules/gitea/index.ts";
 import { memoModule } from "../modules/memo/index.ts";

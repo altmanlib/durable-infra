@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { join } from "node:path";
+
 import type { AssistantMessage, TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
+
 import { formatLocal } from "../../platform/local-time.ts";
 import { captureLogs, fauxSetup, tempDirPerTest, toolDeps } from "../../testing/testing.ts";
 import { builtinExtensions, builtinTools } from "../../testing/tools.ts";
@@ -64,7 +66,9 @@ test("a tool call round trip reaches the final answer with the tool's result", a
 
 test("the request offers the tool and drops the no-tools notice", async () => {
   service = await open(deps);
-  await (await service.send("k", "hi", "r1")).answer;
+  await (
+    await service.send("k", "hi", "r1")
+  ).answer;
   expect(offeredTools(requests[1])).toContain("current_time");
   expect(systemText(requests[1])).not.toContain("You have no tools");
 });
@@ -77,7 +81,9 @@ test("without extensions the model is told it has no tools", async () => {
       return fauxAssistantMessage("ok");
     },
   ]);
-  await (await service.send("k", "hi", "r1")).answer;
+  await (
+    await service.send("k", "hi", "r1")
+  ).answer;
   expect(offeredTools(requests[0])).toEqual([]);
   expect(systemText(requests[0])).toContain("You have no tools");
 });
@@ -138,14 +144,18 @@ test("without tools there is no notice about outside content", async () => {
       return fauxAssistantMessage("ok");
     },
   ]);
-  await (await service.send("k", "hi", "r1")).answer;
+  await (
+    await service.send("k", "hi", "r1")
+  ).answer;
   expect(systemText(requests[0])).not.toContain("fetched from the internet");
 });
 
 test("a finished turn is logged with its duration, tool calls and token use", async () => {
   service = await open(deps);
   const lines = await captureLogs(async () => {
-    await (await (service as AgentService).send("k", "what time is it", "r1")).answer;
+    await (
+      await (service as AgentService).send("k", "what time is it", "r1")
+    ).answer;
   });
   const done = lines.find((entry) => entry.line.includes(" turn.done "))?.line ?? "";
   expect(done).toContain("key=k requestId=r1");

@@ -1,6 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
+
 import type { TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
+
 import { captureLogs, fauxSetup, PROMPT_DEFAULTS, PROMPT_IDS, tempDirPerTest, testPrompts } from "../../testing/testing.ts";
 import type { PromptEntry } from "../prompts.ts";
 
@@ -78,17 +80,23 @@ test("an edit reaches the very next request, in the system prompt of any convers
     return first?.role === "system" ? first.sections?.preamble : undefined;
   };
   faux.setResponses([respond, respond, respond]);
-  await (await service.send("a", "hi", "r1")).answer;
+  await (
+    await service.send("a", "hi", "r1")
+  ).answer;
   expect(preambleOf(seen[0] as TranscriptContext)).toBe(defaultOf("system.preamble").text);
 
   const view = await service.settings.setPrompt("system.preamble", "You are terse. Marker-7.", 0);
   expect(view).toMatchObject({ text: "You are terse. Marker-7.", edited: true, version: 1 });
-  await (await service.send("b", "hi", "r1")).answer;
+  await (
+    await service.send("b", "hi", "r1")
+  ).answer;
   expect(preambleOf(seen[1] as TranscriptContext)).toBe("You are terse. Marker-7.");
 
   const back = await service.settings.resetPrompt("system.preamble", 1);
   expect(back).toMatchObject({ text: defaultOf("system.preamble").text, edited: false, version: 2 });
-  await (await service.send("c", "hi", "r1")).answer;
+  await (
+    await service.send("c", "hi", "r1")
+  ).answer;
   expect(preambleOf(seen[2] as TranscriptContext)).toBe(defaultOf("system.preamble").text);
 });
 
@@ -116,7 +124,9 @@ test("edits and their history are still there after a restart, and are in force 
       return fauxAssistantMessage("ok");
     },
   ]);
-  await (await second.send("k", "hi", "r1")).answer;
+  await (
+    await second.send("k", "hi", "r1")
+  ).answer;
   expect(JSON.stringify(seen[0])).toContain("Kept across restarts.");
 });
 

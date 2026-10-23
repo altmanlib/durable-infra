@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+
 import type { AssistantMessage, TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
+
 import type { GiteaTools } from "../modules/gitea/gitea.ts";
 import type { SearchProvider } from "../modules/web/search.ts";
 import { ModelSummarizer } from "../modules/web/summarizer.ts";
@@ -154,7 +156,9 @@ test("nothing written for the model is hard-coded: with a source of markers, eve
       return fauxAssistantMessage("ok");
     },
   ]);
-  await (await withTools.send("k", "hi", "r1")).answer;
+  await (
+    await withTools.send("k", "hi", "r1")
+  ).answer;
   await withTools.close();
 
   // A search that runs: the reminder after its results is read.
@@ -167,7 +171,9 @@ test("nothing written for the model is hard-coded: with a source of markers, eve
       : fauxAssistantMessage("found it");
   };
   faux.setResponses([searchTwice, searchTwice]);
-  await (await searcher.send("k", "search", "r1")).answer;
+  await (
+    await searcher.send("k", "search", "r1")
+  ).answer;
   await searcher.close();
 
   // A shared conversation without reminders: the no-reminders notice.
@@ -178,7 +184,9 @@ test("nothing written for the model is hard-coded: with a source of markers, eve
       return fauxAssistantMessage("ok");
     },
   ]);
-  await (await shared.send("k", "hi", "r1", { shared: true })).answer;
+  await (
+    await shared.send("k", "hi", "r1", { shared: true })
+  ).answer;
   await shared.close();
 
   // A shared conversation with reminders, asked by someone not privileged: the call is refused with the reason.
@@ -190,7 +198,9 @@ test("nothing written for the model is hard-coded: with a source of markers, eve
       : fauxAssistantMessage(fauxToolCall("set_reminder", { at: "2099-01-01T09:00:00", text: "x" }), { stopReason: "toolUse" });
   };
   faux.setResponses([remindOnce, remindOnce]);
-  await (await guarded.send("k", "remind me", "r1", { shared: true })).answer;
+  await (
+    await guarded.send("k", "remind me", "r1", { shared: true })
+  ).answer;
   await guarded.close();
 
   // Without tools: the no-tools notice instead.
@@ -201,7 +211,9 @@ test("nothing written for the model is hard-coded: with a source of markers, eve
       return fauxAssistantMessage("ok");
     },
   ]);
-  await (await bare.send("k", "hi", "r1")).answer;
+  await (
+    await bare.send("k", "hi", "r1")
+  ).answer;
   await bare.close();
 
   // A tool loop that runs into the budget: the notice is the last message of the next request.
@@ -213,7 +225,9 @@ test("nothing written for the model is hard-coded: with a source of markers, eve
     return told ? fauxAssistantMessage("done") : fauxAssistantMessage(fauxToolCall("current_time", {}), { stopReason: "toolUse" });
   };
   faux.setResponses(Array.from({ length: 5 }, () => respond));
-  await (await looping.send("k", "loop", "r1")).answer;
+  await (
+    await looping.send("k", "loop", "r1")
+  ).answer;
   await looping.close();
 
   // The summary call.

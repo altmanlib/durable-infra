@@ -1,5 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
+
 import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
+
 import { fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService } from "./agent-service.ts";
 
@@ -42,12 +44,18 @@ test("the one active most recently comes first", async () => {
   const service = await open();
   // Built when asked for, so each answer carries the time it was written, not the time the test was set up.
   faux.setResponses([() => fauxAssistantMessage("a"), () => fauxAssistantMessage("b"), () => fauxAssistantMessage("c")]);
-  await (await service.send("feishu:1", "one", "r1")).answer;
+  await (
+    await service.send("feishu:1", "one", "r1")
+  ).answer;
   await new Promise((resolve) => setTimeout(resolve, 20));
-  await (await service.send("feishu:2", "two", "r1")).answer;
+  await (
+    await service.send("feishu:2", "two", "r1")
+  ).answer;
   expect((await service.conversations()).map((info) => info.key)).toEqual(["feishu:2", "feishu:1"]);
   await new Promise((resolve) => setTimeout(resolve, 20));
-  await (await service.send("feishu:1", "again", "r2")).answer;
+  await (
+    await service.send("feishu:1", "again", "r2")
+  ).answer;
   expect((await service.conversations()).map((info) => info.key)).toEqual(["feishu:1", "feishu:2"]);
 });
 
@@ -63,7 +71,9 @@ test("while an answer is being written the conversation is busy, and after it is
 test("a reset keeps the conversation in the list, and abort ends a busy one", async () => {
   const service = await open();
   faux.setResponses([fauxAssistantMessage("first"), fauxAssistantMessage("a long enough answer that it takes a moment to write out")]);
-  await (await service.send("feishu:1", "hi", "r1")).answer;
+  await (
+    await service.send("feishu:1", "hi", "r1")
+  ).answer;
   await service.reset("feishu:1");
   expect((await service.conversations()).map((info) => info.key)).toEqual(["feishu:1"]);
   const turn = await service.send("feishu:1", "go", "r2");

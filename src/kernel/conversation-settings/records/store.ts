@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+
 import type { SettingSchema } from "./schema.ts";
 
 /** A setting as it is stored. */

@@ -1,5 +1,6 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import type { Harness } from "@earendil-works/pi-durable";
+
 import { log } from "../../platform/log.ts";
 import { AllowlistDoc, recordChange } from "./docs.ts";
 import { SettingsError } from "./error.ts";

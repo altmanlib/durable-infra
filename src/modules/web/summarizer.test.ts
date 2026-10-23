@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+
 import type { TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxText, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
+
 import { messageText } from "../../kernel/service/transcript.ts";
 import { defaultPrompts, fauxSetup } from "../../testing/testing.ts";
 import { ModelSummarizer, SummaryError } from "./summarizer.ts";

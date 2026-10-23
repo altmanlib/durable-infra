@@ -353,8 +353,8 @@ outside services.
 - **The layers** are tested by `src/architecture.test.ts` (§3), and **Durable's contract** by the probe
   (§2) — the two assumptions the rest of the suite stands on each have a dedicated check.
 
-`bun run verify` is the gate: Biome, the type check and the tests; `publint` checks the published
-package shape.
+`bun run ci` is the gate: `bun fmt --check`, the type check and the tests; `publint` checks the
+published package shape. VS Code still formats with Biome; CLI formatting uses `bun fmt`.
 
 ## 12. Versioning and upgrading
 
@@ -363,7 +363,7 @@ A release is a tag: `bun run release` aligns `main` with `dev`, bumps the versio
 both are about not stranding a running bot:
 
 - **The earendil peers move together.** Bump the three pins and this package in one change, run the
-  probe, then `verify`. Applications then bump their pins in the same lockstep; an application that
+  probe, then `ci`. Applications then bump their pins in the same lockstep; an application that
   moves first gets peer complaints, by design.
 - **The business database only moves forward.** Because a database ahead of the code is refused (§9),
   deploying older code against a migrated database fails loudly at open rather than corrupting quietly
