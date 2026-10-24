@@ -17,5 +17,5 @@ jobs:
         with:
           bun-version-file: package.json # reads the packageManager field
       - run: bun install --frozen-lockfile
-      - run: bun run verify
+      - run: bun run ci
       - run: bun run check:package
