@@ -67,7 +67,7 @@
     "@earendil-works/chord": "1.4.0",
     "@earendil-works/pi-ai": "1.4.0",
     "@earendil-works/pi-durable": "1.4.0",
-    "@types/bun": "^1.4.3",
+    "@types/bun": "^1.4.4",
     "kysely": "^0.29.7",
     "publint": "^0.3.25",
     "typescript": "^6"

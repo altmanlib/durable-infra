@@ -10,7 +10,7 @@ It provides the parts every such bot needs, so each bot only adds its own channe
 
 ## Requirements
 
-- [Bun](https://bun.com) 1.4.3 or later
+- [Bun](https://bun.com) 1.4.4 or later
 - `@earendil-works/pi-durable`, `@earendil-works/chord` and `@earendil-works/pi-ai`, installed by the application at the exact version listed in this package's `peerDependencies`
 
 ## License
