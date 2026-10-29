@@ -7,13 +7,6 @@
   "engines": {
     "bun": ">=1.4.4"
   },
-  "files": [
-    "src",
-    "!src/**/*.test.ts",
-    "!src/**/fixtures",
-    "!src/architecture.ts",
-    "!src/probe-durable.ts"
-  ],
   "sideEffects": false,
   "repository": {
     "type": "git",
@@ -22,9 +15,6 @@
   "homepage": "https://github.com/altmanlib/durable-infra#readme",
   "bugs": {
     "url": "https://github.com/altmanlib/durable-infra/issues"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "exports": {
     ".": "./src/kernel/index.ts",
@@ -47,7 +37,6 @@
     "test": "bun test",
     "ci": "bun run format:check && bun run typecheck && bun run test",
     "probe": "bun run src/probe-durable.ts",
-    "check:package": "publint",
     "release": "bash scripts/release.sh"
   },
   "peerDependencies": {
@@ -69,7 +58,6 @@
     "@earendil-works/pi-durable": "1.4.0",
     "@types/bun": "^1.4.4",
     "kysely": "^0.29.7",
-    "publint": "^0.3.25",
     "typescript": "^6"
   }
 }

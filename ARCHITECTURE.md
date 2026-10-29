@@ -353,13 +353,12 @@ outside services.
 - **The layers** are tested by `src/architecture.test.ts` (§3), and **Durable's contract** by the probe
   (§2) — the two assumptions the rest of the suite stands on each have a dedicated check.
 
-`bun run ci` is the gate: `bun fmt --check`, the type check and the tests; `publint` checks the
-published package shape. VS Code still formats with Biome; CLI formatting uses `bun fmt`.
+`bun run ci` is the gate: `bun fmt --check`, the type check and the tests. VS Code still formats with Biome; CLI formatting uses `bun fmt`.
 
 ## 12. Versioning and upgrading
 
 A release is a tag: `bun run release` aligns `main` with `dev`, bumps the version and pushes
-`v<version>`, and the Release workflow publishes that tag. Two upgrade rules follow from §2 and §9, and
+`v<version>`, and the Release workflow creates a GitHub Release for that tag. Two upgrade rules follow from §2 and §9, and
 both are about not stranding a running bot:
 
 - **The earendil peers move together.** Bump the three pins and this package in one change, run the

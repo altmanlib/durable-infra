@@ -25,7 +25,6 @@ git merge-base --is-ancestor origin/main dev || fail "main has commits dev lacks
 git merge-base --is-ancestor origin/dev dev || fail "dev is behind origin/dev: pull first"
 
 bun run ci
-bun run check:package
 bun run probe
 
 trap 'echo "release stopped on $(git branch --show-current); look at git status before running it again" >&2' ERR
