@@ -272,6 +272,8 @@ atomicity with a turn. That, and nothing else, is why `app.sqlite` exists beside
 - a step that has been released is never edited — a change of shape is the next step, because the
   database holds real records.
 
+The insights domain holds data derived from Durable, never the truth: per-key spend in 15-minute buckets (a day boundary of any zone in use falls between buckets), a cursor per conversation, and the listing of conversations. `UsageLedger` marks a conversation on each commit and counts its entries after the cursor in one transaction; the first fill of an old history, recovery after a crash and live counting are the same code, so the tables can be dropped and are rebuilt at the next start, which blocks until it is done.
+
 Health is observed from Kysely's log: reads and writes are tracked apart (a full disk still reads), a
 constraint error is the caller's and not a failure, and a success after a failure is logged as recovery.
 The file itself is opened in WAL mode with a busy timeout, so a reader never waits for the one writer.
