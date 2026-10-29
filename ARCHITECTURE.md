@@ -73,7 +73,7 @@ authority; what follows is only what each layer is *for*.
   reach; it is the one place that may name `bun:sqlite`.
 - **kernel** (`src/kernel/`) is the machinery: its foundations are config, prompts and the application
   documents; the settings sit below the service that opens them; the **service** runs sessions and turns
-  and knows no module; **insights** reads stored data through the service and the log files by name;
+  and knows no module; **insights** reads stored data through the service and the log files by name, and keeps a summary of the spend and a listing of the conversations in its own records sub-zone, counted from the commits;
   **conversation-settings** keeps the settings of a conversation, with its own records sub-zone that
   confines the Kysely types (§8, §9).
 - **modules** (`src/modules/`) are the optional features of §10. Each one stands alone: it may use the

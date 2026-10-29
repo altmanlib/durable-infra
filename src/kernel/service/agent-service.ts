@@ -6,6 +6,7 @@ import type { AssistantMessage, Models, ModelThinkingLevel, UserMessage } from "
 import {
   AgentDoc,
   AssistantEntry,
+  type CommitPublication,
   type Conversation,
   type ConversationId,
   createRegistry,
@@ -131,6 +132,8 @@ export type AgentServiceOptions = {
   rateLimit?: RateLimit;
   /** Tool rounds one turn may take before the model is asked to answer without more tools. Default 10. */
   maxToolRounds?: number;
+  /** Called synchronously after each commit, from the moment the storage is open (so before unfinished work resumes). It must not block or touch the service. */
+  onCommit?: (publication: CommitPublication) => void;
   /** Clock for the date section and the rate limit; defaults to the system clock. */
   now?: () => Date;
   /** Tool names a shared conversation may use (all tools when absent); stored at creation, moved to this list at open. */
@@ -216,6 +219,7 @@ export class AgentService {
     const catalog = checkCatalog(options.models, options.model, options.catalog);
     const storage = await openNodeSqliteStorage(options.databasePath);
     const harness = await Harness.open(storage, { models: options.models, registry, settings: options.settings }, context);
+    if (options.onCommit) harness.subscribeCommits(options.onCommit);
     // Before the scheduler starts, so leftover tasks find their code.
     const host: ExtensionHost = { abortTask: (taskId) => harness.abortTask(taskId, context) };
     for (const extension of options.extensions?.(host) ?? []) registry.install(extension);
@@ -463,11 +467,6 @@ export class AgentService {
       cursor = page.next;
     } while (lines.length < limit && cursor !== undefined);
     return lines.slice(-limit);
-  }
-
-  /** Conversations with a channel key, most recently active first; forks and stale mappings are omitted. */
-  conversations(): Promise<ConversationInfo[]> {
-    return this.reader.listConversations();
   }
 
   /** Withdraw queued inputs and stop the running answer. */

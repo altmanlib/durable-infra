@@ -5,8 +5,9 @@ import { type AssistantMessage, type TranscriptContext, Type } from "@earendil-w
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { defineExtension, defineTool } from "@earendil-works/pi-durable";
 
+import { type LedgeredService, openLedgered } from "../../testing/ledger.ts";
 import { fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
-import { AgentService, Insights, QueryError } from "../index.ts";
+import { QueryError } from "../index.ts";
 import { messageText } from "../service/transcript.ts";
 
 const { faux, models, model } = fauxSetup({ tokensPerSecond: 4000 });
@@ -33,21 +34,23 @@ function respond(transcript: TranscriptContext): AssistantMessage {
 }
 
 const dir = tempDirPerTest("insights-");
-let service: AgentService;
+let opened: LedgeredService;
+let service: LedgeredService["service"];
 
 beforeEach(async () => {
   faux.setResponses(Array.from({ length: 50 }, () => respond));
-  service = await AgentService.open({
+  opened = await openLedgered({
     databasePath: join(dir(), "agent.sqlite"),
     models,
     model,
     settings: { retry: { enabled: false }, compaction: { keepRecentTokens: 50 } },
     extensions: () => [defineExtension({ name: "spending", tools: [spender] })],
   });
+  service = opened.service;
 });
 
 afterEach(async () => {
-  await service.close();
+  await opened.close();
 });
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
@@ -61,7 +64,7 @@ test("usage adds up model responses and tool spend by day, and the open range ma
   ).answer;
   expect(await service.compact("a")).toBe("compacted");
 
-  const report = await new Insights(service.reader, { timeZone: "UTC" }).usage();
+  const report = await opened.insights({ timeZone: "UTC" }).usage();
   expect(report.days).toHaveLength(1);
   const day = report.days[0];
   expect(day?.date).toBe(new Date().toISOString().slice(0, 10));
@@ -80,18 +83,18 @@ test("today is resolved in the report time zone", async () => {
   ).answer;
   const now = () => new Date();
   const manila = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(now());
-  const report = await new Insights(service.reader, { timeZone: "Asia/Manila", now }).usage({ from: "today", to: "today" });
+  const report = await opened.insights({ timeZone: "Asia/Manila", now }).usage({ from: "today", to: "today" });
   expect(report).toMatchObject({ from: manila, to: manila, timeZone: "Asia/Manila" });
   expect(report.days.map((day) => day.date)).toEqual([manila]);
 
   const tomorrow = () => new Date(Date.now() + 86_400_000);
-  const empty = await new Insights(service.reader, { timeZone: "Asia/Manila", now: tomorrow }).usage({ from: "today" });
+  const empty = await opened.insights({ timeZone: "Asia/Manila", now: tomorrow }).usage({ from: "today" });
   expect(empty.days).toEqual([]);
   expect(empty.undated).toBeUndefined();
 });
 
 test("malformed or reversed dates are the caller's mistake", async () => {
-  const insights = new Insights(service.reader, { timeZone: "UTC" });
+  const insights = opened.insights({ timeZone: "UTC" });
   await expect(insights.usage({ from: "2026-13-01" })).rejects.toBeInstanceOf(QueryError);
   await expect(insights.usage({ from: "2026-10-06", to: "2026-10-05" })).rejects.toBeInstanceOf(QueryError);
 });
@@ -104,7 +107,7 @@ test("usage of one channel key counts that key's conversations alone, and the ke
     await service.send("b", "spend", "r2")
   ).answer;
   expect(await service.compact("a")).toBe("compacted");
-  const insights = new Insights(service.reader, { timeZone: "UTC" });
+  const insights = opened.insights({ timeZone: "UTC" });
 
   const [a, b, all] = [await insights.usage({}, { key: "a" }), await insights.usage({}, { key: "b" }), await insights.usage()];
   const sources = (report: typeof a) => report.days.flatMap((day) => day.sources.map((source) => `${source.kind}:${source.name}`));
@@ -120,7 +123,7 @@ test("usage of a key with no conversation is an empty report", async () => {
   await (
     await service.send("a", "hello", "r1")
   ).answer;
-  const report = await new Insights(service.reader, { timeZone: "UTC" }).usage({}, { key: "nobody" });
+  const report = await opened.insights({ timeZone: "UTC" }).usage({}, { key: "nobody" });
   expect(report.days).toEqual([]);
   expect(report.total.totalTokens).toBe(0);
 });
@@ -129,7 +132,7 @@ test("the empty key names no conversation: it asks for nothing, not for everythi
   await (
     await service.send("a", "hello", "r1")
   ).answer;
-  const report = await new Insights(service.reader, { timeZone: "UTC" }).usage({}, { key: "" });
+  const report = await opened.insights({ timeZone: "UTC" }).usage({}, { key: "" });
   expect(report.days).toEqual([]);
   expect(report.total.totalTokens).toBe(0);
 });
@@ -142,7 +145,7 @@ test("spentOf reads one key's cumulative spend, never another key's, and an unkn
     await service.send("b", "spend", "r2")
   ).answer;
   expect(await service.compact("a")).toBe("compacted");
-  const insights = new Insights(service.reader, { timeZone: "UTC" });
+  const insights = opened.insights({ timeZone: "UTC" });
 
   const [a, b] = [await insights.spentOf("a"), await insights.spentOf("b")];
   expect(Object.keys(a?.models ?? {})).toEqual(["faux/test"]);
@@ -157,7 +160,7 @@ test("spentOf reads one key's cumulative spend, never another key's, and an unkn
 });
 
 test("spentOf only grows, and a replayed request id adds nothing", async () => {
-  const insights = new Insights(service.reader, { timeZone: "UTC" });
+  const insights = opened.insights({ timeZone: "UTC" });
   await (
     await service.send("a", "hello", "r1")
   ).answer;
@@ -173,14 +176,13 @@ test("spentOf only grows, and a replayed request id adds nothing", async () => {
   expect((await insights.spentOf("a"))?.total.totalTokens ?? 0).toBeGreaterThan(first);
 });
 
-test("the conversations are listed by key, most recent first, and are the same as the service lists", async () => {
+test("the conversations are listed by key", async () => {
   await (
     await service.send("a", "hello", "r1")
   ).answer;
   await (
     await service.send("b", "hello", "r2")
   ).answer;
-  const listed = await new Insights(service.reader).conversations();
-  expect(listed.map((info) => info.key).sort()).toEqual(["a", "b"]);
-  expect(listed).toEqual(await service.conversations());
+  const listed = await opened.insights().conversations();
+  expect(listed.items.map((info) => info.key).sort()).toEqual(["a", "b"]);
 });

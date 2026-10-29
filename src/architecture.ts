@@ -111,9 +111,16 @@ export const ZONES: Zone[] = [
   },
   {
     name: "kernel/insights",
-    why: "insights reads stored data through the service, and the log files by the names log-file.ts gives them",
-    uses: [...KERNEL_BASE, "kernel/service"],
+    why: "insights reads stored data through the service, keeps its own tables through the index of their records, and reads the log files by the names log-file.ts gives them",
+    uses: [...KERNEL_BASE, "kernel/service", "kernel/insights/records/index.ts"],
+    testUses: ["platform/records"],
     packages: DURABLE,
+  },
+  {
+    name: "kernel/insights/records",
+    why: "the insights' tables in the business database: besides records, a place that knows Kysely, whose types stay inside",
+    uses: [...KERNEL_BASE, "platform/records", "kernel/insights/usage.ts"],
+    packages: ["kysely"],
   },
   {
     name: "kernel/conversation-settings",

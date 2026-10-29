@@ -985,6 +985,63 @@ try {
     await sectionHarness.close(context);
   }
 
+  // 11. The ledger follows commits: new entries and new family members are published, and entries scan from an ID on.
+  {
+    const feedStorage = await openNodeSqliteStorage(join(dir, "feed.sqlite"));
+    const registry = createRegistry();
+    const feedHarness = await Harness.open(feedStorage, { models, registry, settings }, context);
+    const entryWrites: { id: number; conversationId: number }[] = [];
+    const mapWrites: (string | undefined)[] = [];
+    feedHarness.subscribeCommits((publication) => {
+      for (const change of publication.changes) {
+        if (change.type === "entry") entryWrites.push({ id: change.value.id, conversationId: change.value.conversationId });
+        else if (change.type === "document" && change.record.kind === "probe.channel") mapWrites.push(change.record.key);
+      }
+    });
+    faux.setResponses([() => fauxAssistantMessage("first"), () => fauxAssistantMessage("second")]);
+    const feedConversation = await feedHarness.createConversation(
+      {
+        ownership: { kind: "ownerless" },
+        agent,
+        init: async (tx, id) => {
+          await tx.doc(ChannelMap, "chan:feed", id);
+        },
+      },
+      context,
+    );
+    await (await feedConversation.submit({ type: "input", content: "one" }, context)).wait(context);
+    await (await feedConversation.submit({ type: "input", content: "two" }, context)).wait(context);
+    await feedHarness.waitForIdle(context);
+    const scanned = (await feedStorage.scanEntries({ conversationId: feedConversation.id, order: "ascending" }, 100, undefined, context)).items.filter(
+      (entry) => entry.conversationId === feedConversation.id,
+    );
+    const scannedIds = scanned.map((entry) => Number(entry.id));
+    check(
+      "a commit publishes each new entry with its conversation id, and the commit that creates a family member",
+      entryWrites.length >= 4 && entryWrites.every((write) => write.conversationId === feedConversation.id) && mapWrites.includes("chan:feed"),
+      `entries=${entryWrites.length} maps=${mapWrites.join(",")}`,
+    );
+    check(
+      "every published entry is stored, and entry IDs only grow",
+      entryWrites.every((write) => scannedIds.includes(write.id)) && scannedIds.every((id, index) => index === 0 || id > (scannedIds[index - 1] as number)),
+      scannedIds.join(","),
+    );
+    const firstId = scannedIds[0] as number;
+    const lastId = scannedIds.at(-1) as number;
+    const after = (
+      await feedStorage.scanEntries({ conversationId: feedConversation.id, minEntryId: (firstId + 1) as never, order: "ascending" }, 100, undefined, context)
+    ).items;
+    const beyond = (
+      await feedStorage.scanEntries({ conversationId: feedConversation.id, minEntryId: (lastId + 1) as never, order: "ascending" }, 100, undefined, context)
+    ).items;
+    check(
+      "a scan from minEntryId returns the entries from that ID on, oldest first, and nothing past the last",
+      after.length === scanned.length - 1 && Number(after[0]?.id) > firstId && beyond.length === 0,
+      `after=${after.length} beyond=${beyond.length}`,
+    );
+    await feedHarness.close(context);
+  }
+
   await harness.close(context);
 } finally {
   rmSync(dir, { recursive: true, force: true });

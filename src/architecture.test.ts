@@ -51,6 +51,8 @@ const BAD: Import[] = [
   { from: "kernel/service/agent-service.ts", specifier: "../../platform/records/records.ts" },
   { from: "modules/web/web-fetch.ts", specifier: "kysely" },
   { from: "platform/records/records.ts", specifier: "../../kernel/service/agent-service.ts" },
+  { from: "kernel/insights/ledger.ts", specifier: "kysely" },
+  { from: "kernel/insights/insights.ts", specifier: "./records/store.ts" },
   // the kernel knows no module
   { from: "kernel/service/agent-service.ts", specifier: "../../modules/reminder/reminder.ts" },
   { from: "kernel/settings/settings.ts", specifier: "../../modules/memo/index.ts" },

@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
 
+import { openLedgered } from "../../testing/ledger.ts";
 import { captureLogs, fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
 import { AgentService, isEvent, type Notice, startNotices } from "../index.ts";
 
@@ -92,9 +93,13 @@ test("an event that is not usable is refused and nothing is scheduled", async ()
 });
 
 test("what owns the scheduled tasks is not a chat: the console's list of conversations does not show it", async () => {
-  const s = await open();
-  await s.schedule(GROUP, Date.now() + 60_000, { kind: "k", data: "" });
-  expect(await s.conversations()).toEqual([]);
+  const ledgered = await openLedgered({ databasePath: join(dir(), "listing.sqlite"), models, model, settings: { retry: { enabled: false } } });
+  try {
+    await ledgered.service.schedule(GROUP, Date.now() + 60_000, { kind: "k", data: "" });
+    expect((await ledgered.insights().conversations()).items).toEqual([]);
+  } finally {
+    await ledgered.close();
+  }
 });
 
 const flush = async (notices: { idle(): Promise<void> }) => {

@@ -6,7 +6,9 @@ import { Records } from "../platform/records/records.ts";
 import { CLIPROXY_PROVIDER, type CoreConfig, createCliproxyModels, type GatewayModel } from "./config.ts";
 import { type ConversationSettings, openConversationSettings, type SettingSpec } from "./conversation-settings/index.ts";
 import { Insights } from "./insights/insights.ts";
+import { UsageLedger } from "./insights/ledger.ts";
 import { LogReader } from "./insights/logs.ts";
+import { openInsightsStore } from "./insights/records/index.ts";
 import type { Contribution, Module } from "./module.ts";
 import { EditablePrompts, KERNEL_PROMPTS, PromptCatalog, type PromptEntries, type PromptSource } from "./prompts.ts";
 import { AgentService, type AgentServiceOptions } from "./service/agent-service.ts";
@@ -29,7 +31,10 @@ export type Core = {
 };
 
 /** Service options the application may set; the rest are filled in by the core. */
-type ServiceOptions = Omit<AgentServiceOptions, "databasePath" | "models" | "model" | "catalog" | "prompts" | "extensions" | "sharedTools" | "privilegedTools">;
+type ServiceOptions = Omit<
+  AgentServiceOptions,
+  "databasePath" | "models" | "model" | "catalog" | "prompts" | "extensions" | "sharedTools" | "privilegedTools" | "onCommit"
+>;
 
 export type OpenCoreOptions = {
   config: CoreConfig;
@@ -94,8 +99,10 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
     });
     const { shared: sharedTools, privileged: privilegedTools } = sharedToolNames(modules);
     const changes = await options.changes?.(records);
+    const ledger = new UsageLedger(await openInsightsStore(records));
     const agent = await AgentService.open({
       ...options.service,
+      onCommit: ledger.observe,
       ...(changes ? { changes } : {}),
       databasePath: config.databasePath,
       models,
@@ -116,9 +123,16 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
         ];
       },
     });
+    try {
+      // After the service is open, which needs the reader; commits made meanwhile were marked and are counted here.
+      await ledger.start(agent.reader);
+    } catch (error) {
+      await agent.close();
+      throw error;
+    }
     return {
       agent,
-      insights: new Insights(agent.reader),
+      insights: new Insights(agent.reader, ledger),
       settings: agent.settings,
       prompts,
       conversationSettings: settings,
@@ -127,6 +141,7 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
       close: async () => {
         try {
           await agent.close();
+          await ledger.close();
         } finally {
           await records.close();
         }

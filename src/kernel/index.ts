@@ -11,7 +11,15 @@ export {
   type SettingSpec,
   type SettingView,
 } from "./conversation-settings/index.ts";
-export { Insights, type InsightsOptions, type KeySpend, QueryError } from "./insights/insights.ts";
+export {
+  CONVERSATIONS_PAGE,
+  CONVERSATIONS_PAGE_MAX,
+  type ConversationPage,
+  Insights,
+  type InsightsOptions,
+  type KeySpend,
+  QueryError,
+} from "./insights/insights.ts";
 export { LOG_PAGE_MAX, LOG_TEXT_MAX, type LogEntry, type LogPage, type LogQuery, LogReader } from "./insights/logs.ts";
 export type { DayRange, UsageCounters, UsageDay, UsageReport, UsageSource } from "./insights/usage.ts";
 export type { BaseDeps, ContributeContext, Contribution, Module, PrepareContext, ToolSpec } from "./module.ts";

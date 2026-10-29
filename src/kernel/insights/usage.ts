@@ -32,9 +32,12 @@ const COUNTERS = ["input", "output", "cacheRead", "cacheWrite", "totalTokens"] a
 
 export const zeroCounters = (): UsageCounters => ({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 });
 
-function add(total: UsageCounters, usage: Partial<UsageCounters>): void {
+/** Adds every counter of `usage` to `total`. */
+export function addCounters(total: UsageCounters, usage: Partial<UsageCounters>): void {
   for (const name of COUNTERS) total[name] += usage[name] ?? 0;
 }
+
+const add = addCounters;
 
 /** Dated spend of an entry: each model response, and each tool result that reports its own spend. */
 export function spendOf(entry: EntryRecord): SpendRecord[] {
