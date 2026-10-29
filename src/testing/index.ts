@@ -13,4 +13,5 @@ export {
   testPrompts,
   toolDeps,
 } from "./testing.ts";
+export { type LedgeredService, openLedgered } from "./ledger.ts";
 export { type AllDeps, builtinExtensions, builtinTools, PRIVILEGED_TOOLS, SHARED_TOOLS } from "./tools.ts";
