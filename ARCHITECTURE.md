@@ -177,7 +177,7 @@ Key files: `src/kernel/service/notices.ts`, `src/kernel/service/delivery.ts`,
 
 ## 7. Conversation governance
 
-Five mechanisms keep a long-lived conversation healthy; all five are the service's, and a channel meets
+Six mechanisms keep a long-lived conversation healthy; all six are the service's, and a channel meets
 them only as behaviour.
 
 - **Compaction.** A conversation's context is summarised before it outgrows the model: the thresholds
@@ -205,10 +205,17 @@ them only as behaviour.
   another model of the catalog stays. A run an earlier process left unfinished keeps the model its current
   request was prepared with and asks the new model from its next prepared request. The switch is
   idempotent, and the history (§8) gets one entry per previous model, so the console can say what moved.
+- **The thinking level.** It is not a per-conversation choice: a conversation stores the configured level
+  (`thinkingLevel`, `low` by default) when it is created, and at open every conversation whose stored level
+  differs is moved to the configured one, in one commit — forks, subagents and the timers conversation
+  included. So a changed level, or a changed default, applies to every conversation from the next open,
+  and a `reset` does not keep an old one. The alignment is idempotent and writes no history entry; it logs
+  one line per moved conversation. If a per-conversation choice is ever added, this alignment must skip the
+  conversations that made one.
 
 Key files: `src/kernel/service/agent-service.ts` (`compact`, `keepRecent`),
 `src/kernel/service/tool-budget.ts`, `src/kernel/service/model-switch.ts`,
-`src/kernel/service/rate-limit.ts`.
+`src/kernel/service/thinking-level.ts`, `src/kernel/service/rate-limit.ts`.
 
 ## 8. The settings surface
 

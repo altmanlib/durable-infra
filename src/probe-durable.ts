@@ -852,8 +852,10 @@ try {
       ],
       tokensPerSecond: 200,
     });
+    const reasoning: (string | undefined)[] = [];
     pair.setResponses(
-      Array.from({ length: 30 }, () => (transcript) => {
+      Array.from({ length: 30 }, () => (transcript, options) => {
+        reasoning.push(options?.reasoning);
         const first = transcript.messages[0];
         if (first?.role === "system" && typeof first.content === "string" && first.content.includes("summarization")) {
           return fauxAssistantMessage("## Summary\nprobe summary");
@@ -917,6 +919,15 @@ try {
     check("the run in flight keeps its model", (await answeredBy())[0] === "big", JSON.stringify(await answeredBy()));
     await send("m4");
     check("the next turn uses the model configured during the run", (await answeredBy())[0] === "small", JSON.stringify(await answeredBy()));
+    const before = reasoning.length;
+    await send("m5");
+    await switching.commit((tx) => configure(tx, made.id, { thinkingLevel: "low" }), context);
+    await send("m6");
+    check(
+      "configure of the thinking level applies from the next request",
+      reasoning[before] === "minimal" && reasoning[reasoning.length - 1] === "low",
+      JSON.stringify(reasoning.slice(before)),
+    );
     await switching.close(context);
   }
 

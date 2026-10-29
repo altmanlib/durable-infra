@@ -37,6 +37,7 @@ import { Outbox, type PendingTurn } from "./outbox.ts";
 import { DEFAULT_RATE_LIMIT, type RateLimit } from "./rate-limit.ts";
 import { SessionReader } from "./reader.ts";
 import { isShared, moveToSharedTools, privilegedToolsHook, sharedAgent, sharedToolsOf } from "./shared-tools.ts";
+import { DEFAULT_THINKING_LEVEL, moveToThinkingLevel } from "./thinking-level.ts";
 import { MAX_EVENT_DATA_CHARS, MAX_EVENT_KIND_CHARS, Timer, TIMER_TASK, TIMERS_KEY } from "./timers.ts";
 import { DEFAULT_MAX_TOOL_ROUNDS, toolBudgetHook } from "./tool-budget.ts";
 import { assistantText, ChatMessageEntry, type HistoryLine, historyLines, normalizeSpeaker, type Speaker, userContent, WindowEntry } from "./transcript.ts";
@@ -236,6 +237,7 @@ export class AgentService {
       catalog,
       ...(options.changes ? { changes: options.changes } : {}),
     });
+    await moveToThinkingLevel(harness, reader.conversations(), options.thinkingLevel ?? DEFAULT_THINKING_LEVEL);
     const sharedNames = AgentService.#sharedNames(options);
     if (sharedNames) await moveToSharedTools(harness, reader.conversations(), sharedToolsOf(registry.snapshot(), sharedNames));
     // Before work resumes, so requests never render replaced texts.
@@ -527,7 +529,7 @@ export class AgentService {
   }
 
   #create(key: ConversationKey, shared: boolean): Promise<Conversation> {
-    const { model, thinkingLevel = "low" } = this.#options;
+    const { model, thinkingLevel = DEFAULT_THINKING_LEVEL } = this.#options;
     const names = shared ? AgentService.#sharedNames(this.#options) : undefined;
     const tools = names && (this.#registry ? sharedToolsOf(this.#registry.snapshot(), names) : []);
     if (tools) log.info("agent.shared_conversation", { key, tools: tools.map((tool) => tool.name).join(",") });
