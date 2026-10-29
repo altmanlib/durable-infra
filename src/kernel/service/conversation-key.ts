@@ -1,14 +1,17 @@
 import type { Context } from "@earendil-works/chord";
-import type { ConversationId, ToolExecutionApi } from "@earendil-works/pi-durable";
+import type { ConversationId, DocumentReader } from "@earendil-works/pi-durable";
 
 import { ConversationKeys } from "./notices.ts";
 
-/** What a tool reads of its session to find the conversation's channel key. */
-export type KeyedApi = { conversationId: ConversationId; snapshot: ToolExecutionApi["snapshot"] };
+type Snapshots = Pick<DocumentReader, "snapshot">;
 
-/** The conversation's channel key, such as the memo's and the settings' key; `undefined` for a conversation without one. */
+/** What `keyOf` reads the key from: a tool's execution api or a hook api, or a prompt section's input (pass it as is). */
+export type KeyedApi = ({ conversationId: ConversationId } & Snapshots) | { conversationId: ConversationId; read: Snapshots };
+
+/** The conversation's channel key; `undefined` for a conversation without one (a fork, a child conversation, the timers'). */
 export async function keyOf(api: KeyedApi, context: Context): Promise<string | undefined> {
-  return (await api.snapshot(ConversationKeys, String(api.conversationId), context))?.key || undefined;
+  const reader = "snapshot" in api ? api : api.read;
+  return (await reader.snapshot(ConversationKeys, String(api.conversationId), context))?.key || undefined;
 }
 
 /** The key for a log line only: never fails the tool, and is `undefined` when it cannot be read. */

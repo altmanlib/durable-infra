@@ -11,7 +11,7 @@ export {
   type SettingSpec,
   type SettingView,
 } from "./conversation-settings/index.ts";
-export { Insights, type InsightsOptions, QueryError } from "./insights/insights.ts";
+export { Insights, type InsightsOptions, type KeySpend, QueryError } from "./insights/insights.ts";
 export { LOG_PAGE_MAX, LOG_TEXT_MAX, type LogEntry, type LogPage, type LogQuery, LogReader } from "./insights/logs.ts";
 export type { DayRange, UsageCounters, UsageDay, UsageReport, UsageSource } from "./insights/usage.ts";
 export type { BaseDeps, ContributeContext, Contribution, Module, PrepareContext, ToolSpec } from "./module.ts";
@@ -57,6 +57,7 @@ export {
   type SendToKey,
   startNotices,
 } from "./service/delivery.ts";
+export { type KeyedApi, keyOf } from "./service/conversation-key.ts";
 export type { AgentExtension, ExtensionHost } from "./service/host.ts";
 export { isEvent, type Notice, type ScheduledEvent } from "./service/notices.ts";
 export type { HistoryLine, Speaker } from "./service/transcript.ts";

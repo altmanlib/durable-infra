@@ -26,6 +26,8 @@ import {
   LiveDoc,
   ResetEntry,
   type Storage,
+  UsageDoc,
+  type UsageState,
   UserEntry,
   watchEvents,
 } from "@earendil-works/pi-durable";
@@ -916,6 +918,71 @@ try {
     await send("m4");
     check("the next turn uses the model configured during the run", (await answeredBy())[0] === "small", JSON.stringify(await answeredBy()));
     await switching.close(context);
+  }
+
+  // Prompt sections read documents of their own conversation, and a conversation's pi.usage holds every request of a turn, tool rounds included.
+  {
+    const spend = { input: 7, output: 3, cacheRead: 0, cacheWrite: 0, totalTokens: 10, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
+    const seen: { conversationId: ConversationId; mapped: number | undefined }[] = [];
+    const registry = createRegistry();
+    registry.install(
+      defineExtension({
+        name: "probe-section",
+        tools: [
+          defineTool({
+            name: "probe_spender",
+            description: "Probe tool with its own spend",
+            parameters: Type.Object({}),
+            replay: "safe",
+            execute: async () => ({ output: [{ type: "text", text: "answered" }], usage: spend }),
+          }),
+        ],
+        sections: [
+          {
+            key: "probe-section",
+            render: async (input, renderContext) => {
+              seen.push({
+                conversationId: input.conversationId,
+                mapped: (await input.read.snapshot(ChannelMap, "chan:section", renderContext))?.conversationId,
+              });
+              return undefined;
+            },
+          },
+        ],
+      }),
+    );
+    const sectionStorage = await openNodeSqliteStorage(join(dir, "section.sqlite"));
+    const sectionHarness = await Harness.open(sectionStorage, { models, registry, settings }, context);
+    faux.setResponses([() => fauxAssistantMessage(fauxToolCall("probe_spender", {}), { stopReason: "toolUse" }), () => fauxAssistantMessage("done")]);
+    const sectionConversation = await sectionHarness.createConversation(
+      {
+        ownership: { kind: "ownerless" },
+        agent,
+        init: async (tx, id) => {
+          await tx.doc(ChannelMap, "chan:section", id);
+        },
+      },
+      context,
+    );
+    await (await sectionConversation.submit({ type: "input", content: "go" }, context)).wait(context);
+    await sectionHarness.waitForIdle(context);
+    check(
+      "a prompt section gets its own conversation id and can read documents",
+      seen.length > 0 && seen.every((each) => each.conversationId === sectionConversation.id && each.mapped === sectionConversation.id),
+      JSON.stringify(seen),
+    );
+    const stored = (await sectionHarness.snapshot(UsageDoc, sectionConversation.id, context)) as UsageState | undefined;
+    const entries = (await sectionStorage.scanEntries({ conversationId: sectionConversation.id }, 100, undefined, context)).items.flatMap(
+      (entry) => entry.model ?? [],
+    );
+    const requested = entries.filter((message) => message.role === "assistant").reduce((total, message) => total + message.usage.totalTokens, 0);
+    const counted = Object.values(stored?.models ?? {}).reduce((total, each) => total + each.totalTokens, 0);
+    check(
+      "pi.usage of a conversation holds every request of a turn, tool rounds included",
+      requested > 0 && counted === requested && stored?.tools.probe_spender?.totalTokens === 10,
+      `models=${counted} entries=${requested}`,
+    );
+    await sectionHarness.close(context);
   }
 
   await harness.close(context);

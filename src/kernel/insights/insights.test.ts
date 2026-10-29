@@ -134,6 +134,45 @@ test("the empty key names no conversation: it asks for nothing, not for everythi
   expect(report.total.totalTokens).toBe(0);
 });
 
+test("spentOf reads one key's cumulative spend, never another key's, and an unknown key has none", async () => {
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
+  await (
+    await service.send("b", "spend", "r2")
+  ).answer;
+  expect(await service.compact("a")).toBe("compacted");
+  const insights = new Insights(service.reader, { timeZone: "UTC" });
+
+  const [a, b] = [await insights.spentOf("a"), await insights.spentOf("b")];
+  expect(Object.keys(a?.models ?? {})).toEqual(["faux/test"]);
+  expect(a?.tools).toEqual({});
+  expect(b?.tools.spender).toMatchObject({ input: 120, output: 30, totalTokens: 150 });
+  // The compaction summary is in a's ledger.
+  const ledger = (await insights.usage({}, { key: "a" })).total.totalTokens;
+  expect(a?.total.totalTokens).toBe(ledger);
+  expect((a?.total.totalTokens ?? 0) + (b?.total.totalTokens ?? 0)).toBe((await insights.usage()).total.totalTokens);
+  expect(await insights.spentOf("nobody")).toBeUndefined();
+  expect(await insights.spentOf("")).toBeUndefined();
+});
+
+test("spentOf only grows, and a replayed request id adds nothing", async () => {
+  const insights = new Insights(service.reader, { timeZone: "UTC" });
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
+  const first = (await insights.spentOf("a"))?.total.totalTokens ?? 0;
+  expect(first).toBeGreaterThan(0);
+  await (
+    await service.send("a", "hello", "r1")
+  ).answer;
+  expect((await insights.spentOf("a"))?.total.totalTokens).toBe(first);
+  await (
+    await service.send("a", "again", "r2")
+  ).answer;
+  expect((await insights.spentOf("a"))?.total.totalTokens ?? 0).toBeGreaterThan(first);
+});
+
 test("the conversations are listed by key, most recent first, and are the same as the service lists", async () => {
   await (
     await service.send("a", "hello", "r1")
