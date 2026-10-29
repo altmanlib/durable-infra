@@ -102,7 +102,7 @@ test("a refusal says which rule and why", () => {
 
 // The package serves applications that have their own channels: nothing in it may name one, or the project that wrote it.
 // Test data is free to use any key, since a key is only a string to the kernel.
-const NAMES = /telegram|feishu|lark|wechat|weixin|durable-bot|durable-claw|durable-feishu|飞书|微信/i;
+const NAMES = /telegram|feishu|lark|wechat|weixin|durable-bot|durable-claw|durable-feishu|durable-desk|飞书|微信/i;
 
 test("the sources name no channel and no application", () => {
   const strays = files
