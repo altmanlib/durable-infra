@@ -45,4 +45,18 @@ describe("createCliproxyModels", () => {
     const model = await models.getModel("cliproxyapi", config.modelId);
     expect(model).toMatchObject({ contextWindow: 300_000, maxTokens: 3000 });
   });
+
+  // A gateway that rejects a level gets 400 on every turn unless the declared map renames it.
+  test("carries a declared thinking level map to the model, including for the configured model", async () => {
+    const config = loadCoreConfig("/data", base);
+    const map = { minimal: "low" };
+    const models = createCliproxyModels(config, [
+      { id: config.modelId, thinkingLevelMap: map },
+      { id: "other", thinkingLevelMap: { minimal: null } },
+      { id: "plain" },
+    ]);
+    expect((await models.getModel("cliproxyapi", config.modelId))?.thinkingLevelMap).toEqual(map);
+    expect((await models.getModel("cliproxyapi", "other"))?.thinkingLevelMap).toEqual({ minimal: null });
+    expect((await models.getModel("cliproxyapi", "plain"))?.thinkingLevelMap).toBeUndefined();
+  });
 });

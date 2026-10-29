@@ -1,5 +1,6 @@
 import { join } from "node:path";
 
+import type { ThinkingLevelMap } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { createModels, createProvider, type Models } from "@earendil-works/pi-ai/models";
 
@@ -51,8 +52,12 @@ export function loadCoreConfig(dataDir: string, env: Record<string, string | und
   };
 }
 
-/** A model of the gateway besides the configured one; the window and the response limit default to the configured model's. */
-export type GatewayModel = { id: string; contextWindow?: number; maxTokens?: number };
+/**
+ * A model of the gateway besides the configured one; the window and the response limit default to the configured model's.
+ * `thinkingLevelMap` renames the levels the gateway wants (`{ minimal: "low" }`) or marks them unsupported (`null`).
+ * An entry with the configured model's id adds these overrides to the configured model.
+ */
+export type GatewayModel = { id: string; contextWindow?: number; maxTokens?: number; thinkingLevelMap?: ThinkingLevelMap };
 
 /** Models of the OpenAI-compatible gateway: the configured one plus `extra`, which conversations may move to. */
 export function createCliproxyModels(
@@ -60,7 +65,8 @@ export function createCliproxyModels(
   extra: readonly GatewayModel[] = [],
 ): Models {
   const models = createModels();
-  const all: GatewayModel[] = [{ id: config.modelId }, ...extra.filter((model) => model.id !== config.modelId)];
+  const configured: GatewayModel = { ...extra.find((model) => model.id === config.modelId), id: config.modelId };
+  const all: GatewayModel[] = [configured, ...extra.filter((model) => model.id !== config.modelId)];
   models.setProvider(
     createProvider({
       id: CLIPROXY_PROVIDER,
@@ -83,6 +89,7 @@ export function createCliproxyModels(
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: model.contextWindow ?? config.contextWindow,
         maxTokens: model.maxTokens ?? config.maxTokens,
+        ...(model.thinkingLevelMap ? { thinkingLevelMap: model.thinkingLevelMap } : {}),
       })),
       api: openAICompletionsApi(),
     }),

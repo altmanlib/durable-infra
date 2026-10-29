@@ -118,6 +118,7 @@ export type AgentServiceOptions = {
   model: ModelRef;
   /** Models `setModel` may switch between; all share the default's provider and must include it. Default: the default model only. */
   catalog?: readonly ModelRef[];
+  /** Reasoning level of new conversations. Default: `low`, which gateway models accept more widely than `minimal`. */
   thinkingLevel?: ModelThinkingLevel;
   settings?: HarnessSettings;
   /** Extra extensions (such as tools) installed after the built-in `assistant` one; built from the opened Harness. */
@@ -526,7 +527,7 @@ export class AgentService {
   }
 
   #create(key: ConversationKey, shared: boolean): Promise<Conversation> {
-    const { model, thinkingLevel = "minimal" } = this.#options;
+    const { model, thinkingLevel = "low" } = this.#options;
     const names = shared ? AgentService.#sharedNames(this.#options) : undefined;
     const tools = names && (this.#registry ? sharedToolsOf(this.#registry.snapshot(), names) : []);
     if (tools) log.info("agent.shared_conversation", { key, tools: tools.map((tool) => tool.name).join(",") });
