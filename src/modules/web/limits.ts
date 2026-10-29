@@ -52,21 +52,32 @@ export class Semaphore {
   }
 }
 
+const DEFAULT_MAX_HOSTS = 1000;
+
 /** Keeps the starts of requests to one host at least `intervalMs` apart. */
 export class HostGate {
   readonly #intervalMs: number;
   readonly #now: () => number;
+  readonly #maxHosts: number;
   readonly #next = new Map<string, number>();
 
-  constructor(intervalMs: number, now: () => number = Date.now) {
+  constructor(intervalMs: number, now: () => number = Date.now, options: { maxHosts?: number } = {}) {
     this.#intervalMs = intervalMs;
     this.#now = now;
+    this.#maxHosts = options.maxHosts ?? DEFAULT_MAX_HOSTS;
+  }
+
+  /** How many hosts are held (some may be past their slot, until the next sweep). */
+  get size(): number {
+    return this.#next.size;
   }
 
   /** Wait for this host's turn; the slot is claimed first, so concurrent callers queue one interval apart. */
   async wait(host: string, signal: AbortSignal, onAbort: () => Error): Promise<void> {
     const now = this.#now();
     const start = Math.max(now, this.#next.get(host) ?? 0);
+    // A host whose slot has passed waits no longer than an unknown one, so forgetting it changes nothing.
+    if (this.#next.size >= this.#maxHosts) for (const [known, at] of this.#next) if (at <= now) this.#next.delete(known);
     this.#next.set(host, start + this.#intervalMs);
     const delay = start - now;
     if (delay <= 0) return;

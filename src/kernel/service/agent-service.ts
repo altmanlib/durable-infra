@@ -173,7 +173,10 @@ export class AgentService {
   readonly #notices: NoticeFeed;
   readonly #limiter: SlidingWindow;
   #registry: Registry | undefined;
-  /** Get-or-create per key, shared by concurrent callers so one key never creates two conversations. */
+  /**
+   * Lookups and creations in flight, shared by concurrent callers so one key never creates two conversations. An entry
+   * leaves once it settles: by then the key's mapping is committed, and keeping every key ever seen would grow without bound.
+   */
   readonly #conversations = new Map<ConversationKey, Promise<Conversation>>();
   /** Read-only stored data, for queries such as usage reports. */
   readonly reader: SessionReader;
@@ -501,11 +504,20 @@ export class AgentService {
   #obtain(key: ConversationKey, shared = false): Promise<Conversation> {
     let pending = this.#conversations.get(key);
     if (!pending) {
-      pending = (async () => (await this.#lookup(key)) ?? this.#create(key, shared))();
-      this.#conversations.set(key, pending);
-      pending.catch(() => this.#conversations.delete(key));
+      const settling: Promise<Conversation> = (async () => (await this.#lookup(key)) ?? this.#create(key, shared))();
+      pending = settling;
+      this.#conversations.set(key, settling);
+      const forget = () => {
+        if (this.#conversations.get(key) === settling) this.#conversations.delete(key);
+      };
+      settling.then(forget, forget);
     }
     return pending;
+  }
+
+  /** How many keys have a lookup or creation in flight; for tests that hold the cache to its bound. */
+  get conversationsInFlight(): number {
+    return this.#conversations.size;
   }
 
   /** The tool names of shared conversations, or `undefined` when they have every tool. */

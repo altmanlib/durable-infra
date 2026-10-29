@@ -113,6 +113,32 @@ test("concurrent first messages of one key share one conversation and stream onl
   expect(lines.filter((line) => line.role === "user").map((line) => line.text)).toEqual(["one", "two"]);
 });
 
+test("concurrent first messages of one key create a single conversation", async () => {
+  const turns = await Promise.all([1, 2, 3].map((n) => service.send("k", `m${n}`, `r${n}`)));
+  await Promise.all(turns.map((turn) => turn.answer));
+  const ids: number[] = [];
+  for await (const id of service.reader.conversations()) if ((await service.reader.keyOf(id)) === "k") ids.push(id);
+  expect(ids).toHaveLength(1);
+});
+
+test("the conversation cache keeps nothing once lookups settle", async () => {
+  for (let n = 0; n < 6; n++) await (await service.send(`key${n}`, "hi", "r1")).answer;
+  expect(service.conversationsInFlight).toBe(0);
+  // A later message of a known key still reaches the same conversation, before and after reopening.
+  const before = await service.reader.conversationOf("key3");
+  await (
+    await service.send("key3", "again", "r2")
+  ).answer;
+  expect(await service.reader.conversationOf("key3")).toBe(before);
+  await service.close();
+  service = await open();
+  await (
+    await service.send("key3", "after reopen", "r3")
+  ).answer;
+  expect(await service.reader.conversationOf("key3")).toBe(before);
+  expect((await service.history("key3", 10)).filter((line) => line.role === "user").map((line) => line.text)).toEqual(["hi", "again", "after reopen"]);
+});
+
 test("a failed model call rejects the answer with TurnFailed and ends the deltas", async () => {
   failNext = true;
   const turn = await service.send("k", "hello", "r1");
