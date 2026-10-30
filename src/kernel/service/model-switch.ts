@@ -37,7 +37,7 @@ export async function selectModel(harness: Harness, id: ConversationId, model: M
   return { from, moved: true };
 }
 
-/** Moves conversations whose model is outside the catalog to `model`, in one commit at open; a second open changes nothing. Returns how many moved. */
+/** Moves conversations on a model of `model`'s provider that is outside the catalog to `model`, in one commit at open; a second open changes nothing. Other providers' conversations are the application's. Returns how many moved. */
 export async function moveToModel(
   harness: Harness,
   conversations: AsyncIterable<ConversationId>,
@@ -49,7 +49,7 @@ export async function moveToModel(
   for await (const id of conversations) {
     const stored = (await harness.snapshot(AgentDoc, id, context))?.model;
     // Unset follows the host's default; the service never creates such a conversation.
-    if (!stored || allowed.some((entry) => sameModel(entry, stored))) continue;
+    if (!stored || stored.provider !== model.provider || allowed.some((entry) => sameModel(entry, stored))) continue;
     moves.push({ id, from: modelName(stored) });
   }
   if (moves.length === 0) return 0;

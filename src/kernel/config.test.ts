@@ -59,4 +59,13 @@ describe("createCliproxyModels", () => {
     expect((await models.getModel("cliproxyapi", "other"))?.thinkingLevelMap).toEqual({ minimal: null });
     expect((await models.getModel("cliproxyapi", "plain"))?.thinkingLevelMap).toBeUndefined();
   });
+
+  // A model declared as reasoning on a gateway that does not support it fails every turn.
+  test("declares a model as reasoning unless told otherwise, including the configured model", async () => {
+    const config = loadCoreConfig("/data", base);
+    const models = createCliproxyModels(config, [{ id: config.modelId, reasoning: false }, { id: "plain" }, { id: "thinker", reasoning: true }]);
+    expect((await models.getModel("cliproxyapi", config.modelId))?.reasoning).toBe(false);
+    expect((await models.getModel("cliproxyapi", "plain"))?.reasoning).toBe(true);
+    expect((await models.getModel("cliproxyapi", "thinker"))?.reasoning).toBe(true);
+  });
 });

@@ -181,3 +181,98 @@ test("a catalog that does not hold the default, crosses providers or names an un
   expect(await fails([OLD, { provider: "faux", modelId: "ghost" }])).toBe(true);
   expect(await fails([OLD, NEW])).toBe(false);
 });
+
+const created = (lines: { line: string }[]) => lines.filter((entry) => entry.line.includes("agent.model_set"));
+
+test("a conversation created with a chosen model answers with it, leaves no history, and the default is readable", async () => {
+  const service = await openWith(OLD, BOTH);
+  expect(service.defaultModel).toEqual(OLD);
+  faux.setResponses([answeredBy()]);
+  const turn = await service.send("feishu:1", "hi", "r1", { model: NEW });
+  expect(await turn.answer).toBe("new");
+  expect(await service.modelOf("feishu:1")).toEqual(NEW);
+  expect((await service.settings.changes()).items).toEqual([]);
+  // The conversation keeps it across a restart that has both.
+  await closeAll();
+  const again = await openWith(OLD, BOTH);
+  expect(await again.modelOf("feishu:1")).toEqual(NEW);
+});
+
+// Spend is booked per conversation, so a conversation must not change model under a replay or a later message.
+test("an existing conversation keeps its model when a later send names another, including a model outside the catalog", async () => {
+  const service = await openWith(OLD, BOTH);
+  await ask(service, "feishu:1", "r1");
+  faux.setResponses([answeredBy()]);
+  expect(await (await service.send("feishu:1", "again", "r2", { model: NEW })).answer).toBe("old");
+  faux.setResponses([answeredBy()]);
+  expect(await (await service.send("feishu:1", "again", "r3", { model: { provider: "faux", modelId: "ghost" } })).answer).toBe("old");
+  expect(await service.modelOf("feishu:1")).toEqual(OLD);
+});
+
+test("a model outside the catalog is refused when it would create the conversation, and nothing is recorded", async () => {
+  const service = await openWith(OLD);
+  await expect(service.send("feishu:1", "hi", "r1", { model: NEW })).rejects.toBeInstanceOf(RangeError);
+  expect(await service.pending(() => true)).toEqual([]);
+  expect(await service.modelOf("feishu:1")).toEqual(OLD);
+  // The refusal does not poison the key: the same conversation is created on the default afterwards.
+  expect(await ask(service, "feishu:1", "r2")).toBe("old");
+});
+
+test("a replay of an accepted input returns the original turn and keeps the model", async () => {
+  const service = await openWith(OLD, BOTH);
+  faux.setResponses([answeredBy()]);
+  const first = await service.send("feishu:1", "hi", "r1", { model: NEW });
+  expect(await first.answer).toBe("new");
+  const replay = await service.send("feishu:1", "hi", "r1", { model: OLD });
+  expect(await replay.answer).toBe("new");
+  expect(await service.modelOf("feishu:1")).toEqual(NEW);
+});
+
+test("choosing a model at creation is logged with no previous model", async () => {
+  const service = await openWith(OLD, BOTH);
+  const lines = await captureLogs(async () => {
+    await ask(service, "feishu:1", "r0");
+    faux.setResponses([answeredBy()]);
+    await (
+      await service.send("feishu:2", "hi", "r1", { model: NEW })
+    ).answer;
+  });
+  expect(created(lines)).toHaveLength(1);
+  expect(created(lines)[0]?.line).toContain("from=none");
+  expect(created(lines)[0]?.line).toContain("to=faux/new");
+});
+
+// Conversations of another provider belong to the application; moving them would change who pays for them.
+test("opening moves only conversations of the default model's provider that fell out of the catalog", async () => {
+  const other = fauxProvider({ provider: "other", api: "other-api", models: [{ id: "theirs" }] });
+  const both = createModels();
+  both.setProvider(faux.provider);
+  both.setProvider(other.provider);
+  const THEIRS = { provider: "other", modelId: "theirs" };
+  const openOn = async (model: typeof OLD, catalog: readonly (typeof OLD)[]) => {
+    const service = await AgentService.open({ databasePath: `${dir()}/agent.sqlite`, models: both, model, catalog, settings: { retry: { enabled: false } } });
+    opened.push(service);
+    return service;
+  };
+
+  const ours = await openOn(OLD, [OLD, NEW]);
+  faux.setResponses([answeredBy()]);
+  await (
+    await ours.send("feishu:1", "hi", "r1", { model: NEW })
+  ).answer;
+  await closeAll();
+  const theirs = await openOn(THEIRS, [THEIRS]);
+  other.setResponses([answeredBy()]);
+  await (
+    await theirs.send("feishu:2", "hi", "r2")
+  ).answer;
+  await closeAll();
+
+  const lines = await captureLogs(async () => {
+    await openOn(OLD, [OLD]);
+  });
+  expect(switched(lines)).toHaveLength(1);
+  expect(switched(lines)[0]?.line).toContain("conversation=feishu:1");
+  const reopened = await openOn(OLD, [OLD]);
+  expect(await reopened.modelOf("feishu:2")).toEqual(THEIRS);
+});

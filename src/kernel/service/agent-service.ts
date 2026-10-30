@@ -78,7 +78,7 @@ export type OwnsKey = (key: ConversationKey) => boolean;
 export type { SetModelResult };
 
 /** Shows and changes a conversation's model; the choice is a person's, never the model's. */
-export type ModelService = Pick<AgentService, "models" | "modelOf" | "setModel">;
+export type ModelService = Pick<AgentService, "models" | "modelOf" | "setModel" | "defaultModel">;
 
 /** What a channel uses of the conversations; sub-parts of a channel take a smaller `Pick`. */
 export type ChannelService = Pick<
@@ -97,6 +97,8 @@ export type SendOptions = {
   shared?: boolean;
   /** The speaker may use `privilegedTools` in a shared conversation; the channel decides. */
   privileged?: boolean;
+  /** Model of a conversation this input creates, from `models()`; an existing conversation keeps its own, so a replay may pass it again. */
+  model?: ModelRef;
 };
 
 export type RecordOptions = {
@@ -253,7 +255,7 @@ export class AgentService {
     return service;
   }
 
-  /** Submit user text; a repeated `requestId` returns the original turn. Throws `RangeError` before recording if `speaker` is invalid. */
+  /** Submit user text; a repeated `requestId` returns the original turn. Throws `RangeError` before recording if `speaker` is invalid, or if `model` would create the conversation and is not in `models()`. */
   async send(key: ConversationKey, text: string, requestId: string, options: SendOptions = {}): Promise<Turn> {
     const speaker = options.speaker && normalizeSpeaker(options.speaker);
     if (!(await this.#admit(key, requestId))) {
@@ -264,7 +266,7 @@ export class AgentService {
       const closed = TurnFeed.closed();
       return { requestId, deltas: closed.deltas, answer, text: answer, tools: closed.tools };
     }
-    const conversation = await this.#obtain(key, options.shared);
+    const conversation = await this.#obtain(key, options.shared, options.model);
     // Record the input before submitting it, so a crash in between can still be replayed from the outbox.
     const unmatched = await this.#harness.commit(async (tx) => {
       const outbox = await tx.doc(Outbox);
@@ -413,6 +415,11 @@ export class AgentService {
     return (await this.#harness.abortTask(taskId, context)) === "marked" ? "cancelled" : "gone";
   }
 
+  /** The model new conversations start with, unless `send` names another. */
+  get defaultModel(): ModelRef {
+    return this.#options.model;
+  }
+
   /** The models `setModel` accepts; the default model is one of them. */
   models(): readonly ModelRef[] {
     return checkCatalog(this.#options.models, this.#options.model, this.#options.catalog);
@@ -504,10 +511,10 @@ export class AgentService {
     return this.#harness.conversation(mapped.conversationId as ConversationId, context);
   }
 
-  #obtain(key: ConversationKey, shared = false): Promise<Conversation> {
+  #obtain(key: ConversationKey, shared = false, model?: ModelRef): Promise<Conversation> {
     let pending = this.#conversations.get(key);
     if (!pending) {
-      const settling: Promise<Conversation> = (async () => (await this.#lookup(key)) ?? this.#create(key, shared))();
+      const settling: Promise<Conversation> = (async () => (await this.#lookup(key)) ?? this.#create(key, shared, model))();
       pending = settling;
       this.#conversations.set(key, settling);
       const forget = () => {
@@ -528,8 +535,15 @@ export class AgentService {
     return options.sharedTools ? { shared: options.sharedTools, privileged: options.privilegedTools ?? [] } : undefined;
   }
 
-  #create(key: ConversationKey, shared: boolean): Promise<Conversation> {
-    const { model, thinkingLevel = DEFAULT_THINKING_LEVEL } = this.#options;
+  #create(key: ConversationKey, shared: boolean, wanted?: ModelRef): Promise<Conversation> {
+    const { thinkingLevel = DEFAULT_THINKING_LEVEL } = this.#options;
+    let model = this.#options.model;
+    if (wanted) {
+      const chosen = this.models().find((entry) => sameModel(entry, wanted));
+      if (!chosen) throw new RangeError(`the model ${modelName(wanted)} is not in the model catalog`);
+      model = chosen;
+      log.info("agent.model_set", { conversation: key, from: "none", to: modelName(chosen) });
+    }
     const names = shared ? AgentService.#sharedNames(this.#options) : undefined;
     const tools = names && (this.#registry ? sharedToolsOf(this.#registry.snapshot(), names) : []);
     if (tools) log.info("agent.shared_conversation", { key, tools: tools.map((tool) => tool.name).join(",") });

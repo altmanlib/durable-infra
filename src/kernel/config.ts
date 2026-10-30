@@ -57,7 +57,7 @@ export function loadCoreConfig(dataDir: string, env: Record<string, string | und
  * `thinkingLevelMap` renames the levels the gateway wants (`{ minimal: "low" }`) or marks them unsupported (`null`).
  * An entry with the configured model's id adds these overrides to the configured model.
  */
-export type GatewayModel = { id: string; contextWindow?: number; maxTokens?: number; thinkingLevelMap?: ThinkingLevelMap };
+export type GatewayModel = { id: string; contextWindow?: number; maxTokens?: number; thinkingLevelMap?: ThinkingLevelMap; reasoning?: boolean };
 
 /** Models of the OpenAI-compatible gateway: the configured one plus `extra`, which conversations may move to. */
 export function createCliproxyModels(
@@ -84,7 +84,7 @@ export function createCliproxyModels(
         api: "openai-completions" as const,
         provider: CLIPROXY_PROVIDER,
         baseUrl: config.baseUrl,
-        reasoning: true,
+        reasoning: model.reasoning ?? true,
         input: ["text" as const],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: model.contextWindow ?? config.contextWindow,
