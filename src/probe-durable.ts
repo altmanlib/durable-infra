@@ -872,7 +872,9 @@ try {
       { models: pairModels, registry: createRegistry(), settings: { retry: { enabled: false }, compaction: { reserveTokens: 100, keepRecentTokens: 50 } } },
       context,
     );
-    const made = await switching.createConversation({ ownership: { kind: "ownerless" }, agent: { model: big, thinkingLevel: "minimal" } }, context);
+    const startLevel = "minimal";
+    const nextLevel = "low";
+    const made = await switching.createConversation({ ownership: { kind: "ownerless" }, agent: { model: big, thinkingLevel: startLevel } }, context);
     const target = await switching.conversation(made.id, context);
     if (!target) throw new Error("conversation missing");
     // Newest first, as `entries` lists them.
@@ -921,11 +923,11 @@ try {
     check("the next turn uses the model configured during the run", (await answeredBy())[0] === "small", JSON.stringify(await answeredBy()));
     const before = reasoning.length;
     await send("m5");
-    await switching.commit((tx) => configure(tx, made.id, { thinkingLevel: "low" }), context);
+    await switching.commit((tx) => configure(tx, made.id, { thinkingLevel: nextLevel }), context);
     await send("m6");
     check(
       "configure of the thinking level applies from the next request",
-      reasoning[before] === "minimal" && reasoning[reasoning.length - 1] === "low",
+      reasoning[before] === startLevel && reasoning[reasoning.length - 1] === nextLevel,
       JSON.stringify(reasoning.slice(before)),
     );
     await switching.close(context);
