@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { join } from "node:path";
 
-import { type AssistantMessage, type TranscriptContext, Type } from "@earendil-works/pi-ai";
+import { type AssistantMessage, type TranscriptContext } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import { defineExtension, defineTool } from "@earendil-works/pi-durable";
+import { obj } from "@earendil-works/pi-schema";
 
 import { type LedgeredService, openLedgered } from "../../testing/ledger.ts";
 import { fauxSetup, tempDirPerTest } from "../../testing/testing.ts";
@@ -17,7 +18,7 @@ const SPEND = { input: 120, output: 30, cacheRead: 0, cacheWrite: 0, totalTokens
 const spender = defineTool({
   name: "spender",
   description: "A tool with its own model spend",
-  parameters: Type.Object({}),
+  parameters: obj({}, { open: true }),
   replay: "safe",
   execute: async () => ({ output: [{ type: "text", text: "spent" }], usage: SPEND }),
 });

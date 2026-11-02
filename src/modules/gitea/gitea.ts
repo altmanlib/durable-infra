@@ -1,6 +1,6 @@
 import type { Context } from "@earendil-works/chord";
-import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "@earendil-works/pi-durable";
+import { int, obj, oneOf, opt, str } from "@earendil-works/pi-schema";
 
 import type { ConversationSettings, SettingSpec } from "../../kernel/conversation-settings/index.ts";
 import type { PromptSource } from "../../kernel/prompts.ts";
@@ -92,10 +92,13 @@ export function createGiteaIssueTool(deps: { settings: ConversationSettings; pro
   return defineTool({
     name: GITEA_ISSUE_CREATE,
     description: deps.prompts.get("tool.gitea_issue_create.description"),
-    parameters: Type.Object({
-      title: Type.String({ description: deps.prompts.get("tool.gitea_issue_create.title") }),
-      body: Type.String({ description: deps.prompts.get("tool.gitea_issue_create.body") }),
-    }),
+    parameters: obj(
+      {
+        title: str({ description: deps.prompts.get("tool.gitea_issue_create.title") }),
+        body: str({ description: deps.prompts.get("tool.gitea_issue_create.body") }),
+      },
+      { open: true },
+    ),
     deferred: true,
     // Filing twice files two issues; an interrupted call is reported to the model instead.
     replay: "unsafe",
@@ -164,12 +167,13 @@ export function createGiteaIssueListTool(deps: { settings: ConversationSettings;
   return defineTool({
     name: GITEA_ISSUE_LIST,
     description: deps.prompts.get("tool.gitea_issue_list.description"),
-    parameters: Type.Object({
-      state: Type.Optional(
-        Type.Union([Type.Literal("open"), Type.Literal("closed"), Type.Literal("all")], { description: deps.prompts.get("tool.gitea_issue_list.state") }),
-      ),
-      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_LIST_LIMIT, description: deps.prompts.get("tool.gitea_issue_list.limit") })),
-    }),
+    parameters: obj(
+      {
+        state: opt(oneOf(["open", "closed", "all"], { description: deps.prompts.get("tool.gitea_issue_list.state") })),
+        limit: opt(int({ minimum: 1, maximum: MAX_LIST_LIMIT, description: deps.prompts.get("tool.gitea_issue_list.limit") })),
+      },
+      { open: true },
+    ),
     deferred: true,
     // Reading changes nothing; an interrupted call may simply be run again.
     replay: "safe",
@@ -212,9 +216,12 @@ export function createGiteaIssueGetTool(deps: { settings: ConversationSettings; 
   return defineTool({
     name: GITEA_ISSUE_GET,
     description: deps.prompts.get("tool.gitea_issue_get.description"),
-    parameters: Type.Object({
-      issue: Type.Integer({ minimum: 1, description: deps.prompts.get("tool.gitea_issue_get.issue") }),
-    }),
+    parameters: obj(
+      {
+        issue: int({ minimum: 1, description: deps.prompts.get("tool.gitea_issue_get.issue") }),
+      },
+      { open: true },
+    ),
     deferred: true,
     replay: "safe",
     execute: async (args, api, context) => {
@@ -275,10 +282,13 @@ export function createGiteaIssueCommentTool(deps: { settings: ConversationSettin
   return defineTool({
     name: GITEA_ISSUE_COMMENT_CREATE,
     description: deps.prompts.get("tool.gitea_issue_comment_create.description"),
-    parameters: Type.Object({
-      issue: Type.Integer({ minimum: 1, description: deps.prompts.get("tool.gitea_issue_comment_create.issue") }),
-      body: Type.String({ description: deps.prompts.get("tool.gitea_issue_comment_create.body") }),
-    }),
+    parameters: obj(
+      {
+        issue: int({ minimum: 1, description: deps.prompts.get("tool.gitea_issue_comment_create.issue") }),
+        body: str({ description: deps.prompts.get("tool.gitea_issue_comment_create.body") }),
+      },
+      { open: true },
+    ),
     deferred: true,
     // Posting twice posts two comments; an interrupted call is reported to the model instead.
     replay: "unsafe",
@@ -359,12 +369,15 @@ export function createGiteaIssueEditTool(deps: { settings: ConversationSettings;
   return defineTool({
     name: GITEA_ISSUE_EDIT,
     description: deps.prompts.get("tool.gitea_issue_edit.description"),
-    parameters: Type.Object({
-      issue: Type.Integer({ minimum: 1, description: deps.prompts.get("tool.gitea_issue_edit.issue") }),
-      title: Type.Optional(Type.String({ description: deps.prompts.get("tool.gitea_issue_edit.title") })),
-      body: Type.Optional(Type.String({ description: deps.prompts.get("tool.gitea_issue_edit.body") })),
-      state: Type.Optional(Type.Union([Type.Literal("open"), Type.Literal("closed")], { description: deps.prompts.get("tool.gitea_issue_edit.state") })),
-    }),
+    parameters: obj(
+      {
+        issue: int({ minimum: 1, description: deps.prompts.get("tool.gitea_issue_edit.issue") }),
+        title: opt(str({ description: deps.prompts.get("tool.gitea_issue_edit.title") })),
+        body: opt(str({ description: deps.prompts.get("tool.gitea_issue_edit.body") })),
+        state: opt(oneOf(["open", "closed"], { description: deps.prompts.get("tool.gitea_issue_edit.state") })),
+      },
+      { open: true },
+    ),
     deferred: true,
     // An edit names the end state, so running it again changes nothing more.
     replay: "safe",

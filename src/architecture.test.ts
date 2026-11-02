@@ -150,3 +150,21 @@ test("copy stays in the prompt catalogs and the texts module", () => {
     );
   expect(strays).toEqual([]);
 });
+
+test("the earendil peers are pinned to one exact version, as peers and as dev dependencies", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url).pathname, "utf8")) as {
+    peerDependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+  };
+  const earendil = (deps: Record<string, string>) => Object.entries(deps).filter(([name]) => name.startsWith("@earendil-works/"));
+  const peers = earendil(manifest.peerDependencies);
+  expect(peers.map(([name]) => name).sort()).toEqual([
+    "@earendil-works/chord",
+    "@earendil-works/pi-ai",
+    "@earendil-works/pi-durable",
+    "@earendil-works/pi-schema",
+  ]);
+  const versions = new Set([...peers, ...earendil(manifest.devDependencies)].map(([, version]) => version));
+  expect(versions.size).toBe(1);
+  expect([...versions][0]).toMatch(/^\d+\.\d+\.\d+$/);
+});

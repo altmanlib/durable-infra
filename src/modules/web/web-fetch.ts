@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "@earendil-works/pi-durable";
+import { obj, opt, str } from "@earendil-works/pi-schema";
 
 import type { PromptSource } from "../../kernel/prompts.ts";
 import { keyForLog } from "../../kernel/service/conversation-key.ts";
@@ -69,10 +69,13 @@ export function createWebFetchTool(deps: { pages: PageFetcher; summarizer: PageS
   return defineTool({
     name: WEB_FETCH,
     description: deps.prompts.get("tool.web_fetch.description"),
-    parameters: Type.Object({
-      url: Type.String({ description: deps.prompts.get("tool.web_fetch.url") }),
-      prompt: Type.Optional(Type.String({ description: deps.prompts.get("tool.web_fetch.prompt") })),
-    }),
+    parameters: obj(
+      {
+        url: str({ description: deps.prompts.get("tool.web_fetch.url") }),
+        prompt: opt(str({ description: deps.prompts.get("tool.web_fetch.prompt") })),
+      },
+      { open: true },
+    ),
     // Reading changes nothing and the answer call has no tools, so an interrupted call may simply run again.
     replay: "safe",
     execute: async (args, api, context) => {

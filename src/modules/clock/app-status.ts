@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "@earendil-works/pi-durable";
+import { obj } from "@earendil-works/pi-schema";
 
 import type { BaseDeps } from "../../kernel/module.ts";
 import { formatLocal } from "../../platform/local-time.ts";
@@ -9,7 +9,7 @@ export function createAppStatusTool(deps: Pick<BaseDeps, "now" | "prompts" | "st
   return defineTool({
     name: "app_status",
     description: deps.prompts.get("tool.app_status.description"),
-    parameters: Type.Object({}),
+    parameters: obj({}, { open: true }),
     replay: "safe",
     execute: async () => {
       const uptimeSeconds = Math.max(0, Math.floor((deps.now().getTime() - deps.startedAt.getTime()) / 1000));

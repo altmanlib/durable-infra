@@ -1,6 +1,6 @@
 import type { Context } from "@earendil-works/chord";
-import { Type } from "@earendil-works/pi-ai";
 import { type ConversationId, defineTask, defineTool, type TaskId, type ToolExecutionApi } from "@earendil-works/pi-durable";
+import { obj, str } from "@earendil-works/pi-schema";
 
 import type { BaseDeps } from "../../kernel/module.ts";
 import { ConversationKeys, Notices } from "../../kernel/service/notices.ts";
@@ -68,10 +68,13 @@ export function createReminderTool(deps: Pick<BaseDeps, "now" | "prompts">) {
   return defineTool({
     name: SET_REMINDER,
     description: deps.prompts.get("tool.set_reminder.description"),
-    parameters: Type.Object({
-      at: Type.String({ description: deps.prompts.get("tool.set_reminder.at") }),
-      text: Type.String({ minLength: 1, description: deps.prompts.get("tool.set_reminder.text") }),
-    }),
+    parameters: obj(
+      {
+        at: str({ description: deps.prompts.get("tool.set_reminder.at") }),
+        text: str({ minLength: 1, description: deps.prompts.get("tool.set_reminder.text") }),
+      },
+      { open: true },
+    ),
     // Running twice would schedule twice; an interrupted call is reported to the model instead.
     replay: "unsafe",
     // The pending-reminder limit is checked before creating, so calls of one round must not interleave.
@@ -97,7 +100,7 @@ export function createListRemindersTool(deps: Pick<BaseDeps, "prompts">) {
   return defineTool({
     name: "list_reminders",
     description: deps.prompts.get("tool.list_reminders.description"),
-    parameters: Type.Object({}),
+    parameters: obj({}, { open: true }),
     replay: "safe",
     execute: async (_args, api, context) => {
       const live = await liveReminders(api, context);
@@ -112,7 +115,7 @@ export function createCancelReminderTool(deps: Pick<BaseDeps, "abortTask" | "pro
   return defineTool({
     name: "cancel_reminder",
     description: deps.prompts.get("tool.cancel_reminder.description"),
-    parameters: Type.Object({ id: Type.String({ description: deps.prompts.get("tool.cancel_reminder.id") }) }),
+    parameters: obj({ id: str({ description: deps.prompts.get("tool.cancel_reminder.id") }) }, { open: true }),
     // Cancelling twice is harmless: the second finds nothing to cancel.
     replay: "safe",
     execute: async (args, api, context) => {

@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai";
 import { defineTool, section } from "@earendil-works/pi-durable";
+import { obj, str } from "@earendil-works/pi-schema";
 
 import type { ConversationSettings } from "../../kernel/conversation-settings/index.ts";
 import type { PromptSource } from "../../kernel/prompts.ts";
@@ -41,7 +41,7 @@ export function createListSettingsTool(deps: Deps) {
   return defineTool({
     name: LIST_SETTINGS,
     description: deps.prompts.get("tool.list_settings.description"),
-    parameters: Type.Object({}),
+    parameters: obj({}, { open: true }),
     deferred: true,
     replay: "safe",
     execute: async (_args, api, context) => {
@@ -71,10 +71,13 @@ export function createSetSettingTool(deps: Deps) {
   return defineTool({
     name: SET_SETTING,
     description: deps.prompts.get("tool.set_setting.description"),
-    parameters: Type.Object({
-      name: Type.String({ description: deps.prompts.get("tool.set_setting.name") }),
-      value: Type.String({ description: deps.prompts.get("tool.set_setting.value") }),
-    }),
+    parameters: obj(
+      {
+        name: str({ description: deps.prompts.get("tool.set_setting.name") }),
+        value: str({ description: deps.prompts.get("tool.set_setting.value") }),
+      },
+      { open: true },
+    ),
     deferred: true,
     // Re-running an interrupted set is harmless: it writes the same row.
     replay: "safe",
@@ -116,7 +119,7 @@ export function createClearSettingTool(deps: Deps) {
   return defineTool({
     name: CLEAR_SETTING,
     description: deps.prompts.get("tool.clear_setting.description"),
-    parameters: Type.Object({ name: Type.String({ description: deps.prompts.get("tool.clear_setting.name") }) }),
+    parameters: obj({ name: str({ description: deps.prompts.get("tool.clear_setting.name") }) }, { open: true }),
     deferred: true,
     // Clearing twice is harmless: the second finds nothing.
     replay: "safe",

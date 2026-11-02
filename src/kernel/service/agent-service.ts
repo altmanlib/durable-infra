@@ -9,6 +9,7 @@ import {
   type CommitPublication,
   type Conversation,
   type ConversationId,
+  type ConversationView,
   createRegistry,
   defineExtension,
   Harness,
@@ -226,7 +227,7 @@ export class AgentService {
     const catalog = checkCatalog(options.models, options.model, options.catalog);
     const storage = await openNodeSqliteStorage(options.databasePath);
     const harness = await Harness.open(storage, { models: options.models, registry, settings: options.settings }, context);
-    if (options.onCommit) harness.subscribeCommits(options.onCommit);
+    if (options.onCommit) harness.observeCommits({ advance: options.onCommit, end: () => {} });
     // Before the scheduler starts, so leftover tasks find their code.
     const host: ExtensionHost = { abortTask: (taskId) => harness.abortTask(taskId, context) };
     for (const extension of options.extensions?.(host) ?? []) registry.install(extension);
@@ -292,12 +293,16 @@ export class AgentService {
     const started = Date.now();
 
     // Partials are cumulative, so attaching after submit loses nothing.
-    const view = await conversation.viewState(context);
-    const unsubscribe = view.subscribe((value) =>
+    const watch = await conversation.watch(context);
+    const show = (value: ConversationView) =>
       feed.observe(value.docs[LiveDoc.definition.kind] as LiveState | undefined, (task) =>
         assistantText(value.entries.findLast((entry) => entry.byTaskId === task && AssistantEntry.is(entry))),
-      ),
-    );
+      );
+    show(watch.value);
+    watch.start(async (call) => {
+      if (call.kind === "value") show(call.value);
+    });
+    const unsubscribe = () => void watch.stop();
 
     const answer = (async () => {
       try {
@@ -318,7 +323,6 @@ export class AgentService {
         throw error;
       } finally {
         unsubscribe();
-        view.dispose();
         feed.end();
       }
     })();

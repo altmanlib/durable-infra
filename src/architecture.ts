@@ -13,7 +13,7 @@ export type Zone = {
   free?: boolean;
 };
 
-const DURABLE = ["@earendil-works/pi-durable", "@earendil-works/chord", "@earendil-works/pi-ai"];
+const DURABLE = ["@earendil-works/pi-durable", "@earendil-works/chord", "@earendil-works/pi-ai", "@earendil-works/pi-schema"];
 
 /** What the kernel offers a module: the module contract, the texts, the session machinery a tool needs, the settings. */
 const MODULE_API = [

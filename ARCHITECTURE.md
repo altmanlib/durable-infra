@@ -38,13 +38,15 @@ face; it does not contain one.
 
 ## 2. The runtime dependencies
 
-Three packages of one family, all peer dependencies, all pinned to one exact version (see `peerDependencies` in `package.json`):
+Four packages of one family, all peer dependencies, all pinned to one exact version (see `peerDependencies` in `package.json`):
 
 - `@earendil-works/pi-durable` — the durable substrate: sessions, documents (a base plus deltas),
   submissions and tasks, stored in SQLite. Everything in §5 and §6 stands on it.
 - `@earendil-works/chord` — the execution context (`BACKGROUND_CONTEXT`) and the JSON types the documents
   are written in.
 - `@earendil-works/pi-ai` — models and providers, the message types, and the faux models the tests use.
+- `@earendil-works/pi-schema` — the JSON Schema builders the tool parameters are written in. Tool parameters stay open
+  objects (`obj(..., { open: true })`), so a model that sends an extra field is not refused for it.
 
 The pinning is a rule, not an accident, and it has two halves. First, the application and this package
 must share **one copy** of each: the Harness, the document registry and the model registry are runtime
@@ -65,7 +67,7 @@ database — the reason there are two is §9.
 ## 3. Layers
 
 Three layers, and a testing zone that stands outside them. The zone table in `src/architecture.ts` is the
-authority; what follows is only what each layer is *for*.
+authority; what follows is only what each layer is _for_.
 
 - **platform** (`src/platform/`) is below everything and knows no one: structured logging with a rotating
   file, the in-process counters (sliding window, throttle) and local time. **platform/records** is a zone
@@ -115,8 +117,8 @@ and back. `AgentService.send(key, text, requestId)` is the one door for a user's
 its steps is the reliability story of the whole package:
 
 1. **Admission.** A per-conversation sliding-window rate limit (default 30 inputs in 5 minutes) decides
-   whether the input may start a turn. A refused input is rejected as `TurnFailed` and *nothing is
-   recorded* — a refusal is never replayed. An input that is already in the outbox is always admitted:
+   whether the input may start a turn. A refused input is rejected as `TurnFailed` and _nothing is
+   recorded_ — a refusal is never replayed. An input that is already in the outbox is always admitted:
    it was accepted once, and replay is not a new flood.
 2. **Record before submit.** The input is committed to the **outbox** — a Durable document
    (`app.outbox`) listing the inputs whose answers are not yet confirmed delivered — and only then
@@ -125,13 +127,15 @@ its steps is the reliability story of the whole package:
 3. **The turn.** The submission runs inside Durable; `send` returns at once with a feed (the answer's
    deltas, its full text by rounds, and its tool activity) that the channel renders as it goes. The
    answer promise settles from the committed answer entry, so what the channel shows last is what was
-   stored.
+   stored. The feed is read from the conversation's watch: its first value is shown at once, each later value as it
+   is committed. Durable may defer the commits of in-flight progress, so a mirror of Storage sees an entry when it
+   is stored, not while it streams.
 4. **Confirmation.** Only after the channel has actually sent the answer to the user does it call
    `delivered(key, requestId)`, which removes the input from the outbox.
 
 Recovery is the same path run again. When a channel starts, `replayPending`
 (`src/kernel/service/delivery.ts`) takes the outbox inputs of the keys the channel owns and, for each,
-calls `send` with the *same* `requestId` — which returns the original turn, so the model is not run
+calls `send` with the _same_ `requestId` — which returns the original turn, so the model is not run
 twice and the user never receives a second, different answer — sends its text, and confirms. Inputs of
 one key replay in arrival order and a failure holds back the rest of that key; keys replay in parallel;
 inputs being answered right now are skipped.
@@ -168,7 +172,7 @@ A channel can also ask to be told something at a time: `AgentService.schedule(ke
 timer task on a dedicated timers conversation, and when it comes due the event arrives as a notice of
 that key, under the same id. The event itself — `{ kind, data }` — is opaque: the core keeps it and
 hands it back unread, and what it means is the channel's. `unschedule` answers `cancelled` or `gone`;
-*gone* includes "already fired", so a channel must tolerate a notice it no longer needs, and every
+_gone_ includes "already fired", so a channel must tolerate a notice it no longer needs, and every
 notice handler must do no harm when it runs twice. The reminder module (§10) is the built-in user of
 both halves: its task waits, and leaves a text notice for the channel to deliver.
 
@@ -241,7 +245,7 @@ the stored list rules; every message asks the list, which answers from memory. U
 away are remembered — in memory only, the most recent 50 — so the console can offer to let them in.
 
 **The history of changes.** Settings edits, allowlist changes and model moves are recorded in a
-`ChangeLog`: *committed first, noted after*. By default the history is a Durable document; an application
+`ChangeLog`: _committed first, noted after_. By default the history is a Durable document; an application
 that keeps its own — `openCore`'s `changes`, made from the business database once that is open — takes
 over the recording, and the built-in allowlist and per-channel settings then step aside for the
 application's own. The history is how the console answers "who changed what, when"; it is an audit, not
@@ -317,14 +321,14 @@ its specs, so the declaration cannot drift from the tools.
 
 The roster today:
 
-| Module | What it adds | Notes |
-| --- | --- | --- |
-| `clock` | The time and the application status | Read-only facts; shared |
-| `reminder` | Reminders that fire as notices (§6) | Privileged: setting one changes state |
-| `web` | `web_fetch` and `web_search` | Shared, read-only; no search tool without a provider |
-| `memo` | The memo of a shared conversation | Own table in the business database |
-| `settings-tools` | List, set and clear conversation settings (§8) | The model's door to the specs modules register |
-| `gitea` | Work with issues on a group's Gitea: file, list, read, comment, edit | Its target is the conversation setting `gitea.repo` |
+| Module           | What it adds                                                         | Notes                                                |
+| ---------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| `clock`          | The time and the application status                                  | Read-only facts; shared                              |
+| `reminder`       | Reminders that fire as notices (§6)                                  | Privileged: setting one changes state                |
+| `web`            | `web_fetch` and `web_search`                                         | Shared, read-only; no search tool without a provider |
+| `memo`           | The memo of a shared conversation                                    | Own table in the business database                   |
+| `settings-tools` | List, set and clear conversation settings (§8)                       | The model's door to the specs modules register       |
+| `gitea`          | Work with issues on a group's Gitea: file, list, read, comment, edit | Its target is the conversation setting `gitea.repo`  |
 
 Two of them show the shape of the outside world in this design. The web module's fetcher refuses this
 machine and private networks by default, its page answers come from a summariser (by default one call of
@@ -370,7 +374,7 @@ A release is a tag: `bun run release` aligns `main` with `dev`, bumps the versio
 `v<version>`, and the Release workflow creates a GitHub Release for that tag. Two upgrade rules follow from §2 and §9, and
 both are about not stranding a running bot:
 
-- **The earendil peers move together.** Bump the three pins and this package in one change, run the
+- **The earendil peers move together.** Bump the four pins and this package in one change, run the
   probe, then `ci`. Applications then bump their pins in the same lockstep; an application that
   moves first gets peer complaints, by design.
 - **The business database only moves forward.** Because a database ahead of the code is refused (§9),

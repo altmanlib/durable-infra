@@ -64,8 +64,9 @@ export class NoticeFeed {
     const watch = await harness.watchDoc(Notices, context);
     const feed = new NoticeFeed(harness, new Set((watch?.value?.items ?? []).map((item) => item.id)));
     if (watch) {
-      watch.start(async (value) => {
-        for (const item of value?.items ?? []) {
+      watch.start(async (call) => {
+        if (call.kind !== "value") return;
+        for (const item of call.value.items) {
           if (feed.#seen.has(item.id)) continue;
           feed.#seen.add(item.id);
           for (const listener of feed.#listeners) listener({ ...item });

@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "@earendil-works/pi-durable";
+import { obj, str } from "@earendil-works/pi-schema";
 
 import type { PromptSource } from "../../kernel/prompts.ts";
 import { keyOf } from "../../kernel/service/conversation-key.ts";
@@ -23,7 +23,7 @@ export function createListMemosTool(deps: Deps) {
   return defineTool({
     name: "list_memos",
     description: deps.prompts.get("tool.list_memos.description"),
-    parameters: Type.Object({}),
+    parameters: obj({}, { open: true }),
     deferred: true,
     replay: "safe",
     execute: async (_args, api, context) => {
@@ -47,7 +47,7 @@ export function createGetMemoTool(deps: Deps) {
   return defineTool({
     name: "get_memo",
     description: deps.prompts.get("tool.get_memo.description"),
-    parameters: Type.Object({ name: Type.String({ description: deps.prompts.get("tool.get_memo.name") }) }),
+    parameters: obj({ name: str({ description: deps.prompts.get("tool.get_memo.name") }) }, { open: true }),
     deferred: true,
     replay: "safe",
     execute: async (args, api, context) => {
@@ -71,10 +71,13 @@ export function createSetMemoTool(deps: Deps) {
   return defineTool({
     name: "set_memo",
     description: deps.prompts.get("tool.set_memo.description"),
-    parameters: Type.Object({
-      name: Type.String({ description: deps.prompts.get("tool.set_memo.name") }),
-      body: Type.String({ description: deps.prompts.get("tool.set_memo.body") }),
-    }),
+    parameters: obj(
+      {
+        name: str({ description: deps.prompts.get("tool.set_memo.name") }),
+        body: str({ description: deps.prompts.get("tool.set_memo.body") }),
+      },
+      { open: true },
+    ),
     deferred: true,
     // Writing the same entry again leaves the same row: an interrupted call may simply run again.
     replay: "safe",
@@ -113,7 +116,7 @@ export function createDeleteMemoTool(deps: Deps) {
   return defineTool({
     name: "delete_memo",
     description: deps.prompts.get("tool.delete_memo.description"),
-    parameters: Type.Object({ name: Type.String({ description: deps.prompts.get("tool.delete_memo.name") }) }),
+    parameters: obj({ name: str({ description: deps.prompts.get("tool.delete_memo.name") }) }, { open: true }),
     deferred: true,
     // Deleting twice is harmless: the second finds nothing.
     replay: "safe",

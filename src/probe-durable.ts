@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { awaitWithContext, BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
-import { type AssistantMessage, Type } from "@earendil-works/pi-ai";
+import { type AssistantMessage } from "@earendil-works/pi-ai";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import {
@@ -14,6 +14,7 @@ import {
   configure,
   ConversationBusy,
   type ConversationId,
+  type ConversationView,
   createRegistry,
   type Cursor,
   defineDoc,
@@ -29,9 +30,9 @@ import {
   UsageDoc,
   type UsageState,
   UserEntry,
-  watchEvents,
 } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
+import { obj } from "@earendil-works/pi-schema";
 
 const context = BACKGROUND_CONTEXT;
 let failures = 0;
@@ -100,36 +101,27 @@ try {
   check("harness.conversation(id) reacquires after reopen", conversation?.id === created.id);
   if (!conversation) throw new Error("conversation missing");
 
-  // 2. Streaming sources: LiveDoc partial (cumulative) and watchEvents text_delta (incremental).
+  // 2. Streaming source: the conversation view's LiveDoc partial (cumulative); the watch's first value is read apart from its calls.
   const partials: string[] = [];
-  const view = await conversation.viewState(context);
-  const unsubscribe = view.subscribe((value) => {
+  const watch = await conversation.watch(context);
+  const observe = (value: ConversationView) => {
     const live = value.docs[LiveDoc.definition.kind] as { generation?: { message?: AssistantMessage } } | undefined;
     const partial = text(live?.generation?.message);
     if (partial && partial !== partials.at(-1)) partials.push(partial);
-  });
-  const stream = await watchEvents(harness, conversation.id, context);
-  let deltas = "";
-  let endedWith = "";
-  stream.start(async (events) => {
-    for (const event of events) {
-      if (event.type === "message_end" && AssistantEntry.is(event.entry)) {
-        endedWith = text(event.entry.model?.[0] as AssistantMessage | undefined);
-      }
-      // The first committed partial arrives whole in message_start; later commits arrive as deltas.
-      if (event.type === "message_start" && event.message.role === "assistant") deltas = text(event.message);
-      if (event.type !== "message_update") continue;
-      for (const change of event.changes) if (change.type === "text_delta") deltas += change.delta;
-    }
+  };
+  observe(watch.value);
+  let lastView = watch.value;
+  watch.start(async (call) => {
+    if (call.kind !== "value") return;
+    lastView = call.value;
+    observe(call.value);
   });
 
   const first = await conversation.submit({ type: "input", content: "hello", requestId: "tg:42:1" }, context);
   const settled = await first.wait(context);
   await harness.waitForIdle(context);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await stream.stop();
-  unsubscribe();
-  view.dispose();
+  await watch.stop();
   check("submission settles done with answer entry id", settled.status === "done" && settled.answer !== undefined);
   const answerId = settled.answer;
   const answer = answerId !== undefined ? await conversation.commit((tx) => tx.entry(AssistantEntry, answerId), context) : undefined;
@@ -141,8 +133,8 @@ try {
     partials.every((p, i) => i === 0 || p.startsWith(partials[i - 1] as string)),
   );
   check("last LiveDoc partial is a strict prefix of the final text", finalText.startsWith(partials.at(-1) ?? ""));
-  check("watchEvents message_start text + text_delta is a prefix of the final text", finalText.startsWith(deltas));
-  check("watchEvents message_end carries the final text", endedWith === finalText, `deltas ${deltas.length}/${finalText.length}`);
+  const viewAnswer = lastView.entries.findLast((entry) => AssistantEntry.is(entry));
+  check("the watched view's newest entries carry the final text", text(viewAnswer?.model?.[0] as AssistantMessage | undefined) === finalText);
 
   // 3. requestId idempotency, scoped to the conversation.
   const again = await conversation.submit({ type: "input", content: "hello", requestId: "tg:42:1" }, context);
@@ -212,7 +204,7 @@ try {
     const probeTool = defineTool({
       name: toolName,
       description: "Probe tool",
-      parameters: Type.Object({}),
+      parameters: obj({}, { open: true }),
       replay,
       execute: async (_args, _api, toolContext) => {
         executions++;
@@ -260,7 +252,7 @@ try {
     const coded = defineTool({
       name: "probe_coded",
       description: "Probe tool that reports a code",
-      parameters: Type.Object({}),
+      parameters: obj({}, { open: true }),
       replay: "safe",
       execute: async () => ({ output: [{ type: "text", text: "plain words" }], details: { code: "probe_code_xyz" } }),
     });
@@ -326,7 +318,7 @@ try {
     const startTimer = defineTool({
       name: "start_timer",
       description: "Probe timer",
-      parameters: Type.Object({}),
+      parameters: obj({}, { open: true }),
       replay: "unsafe",
       execute: async (_args, api, toolContext) => {
         await api.createTask(Timer, { at: Date.now() + 1500 }, { ownership: { kind: "conversation" }, background: true }, toolContext);
@@ -402,7 +394,7 @@ try {
     const spender = defineTool({
       name: "probe_spender",
       description: "Probe tool with its own spend",
-      parameters: Type.Object({}),
+      parameters: obj({}, { open: true }),
       replay: "safe",
       execute: async () => ({ output: [{ type: "text", text: "answered" }], usage: spend }),
     });
@@ -432,7 +424,7 @@ try {
           defineTool({
             name: "probe_spender",
             description: "Probe tool with its own spend",
-            parameters: Type.Object({}),
+            parameters: obj({}, { open: true }),
             replay: "safe",
             execute: async () => ({
               content: [{ type: "text", text: "answered" }],
@@ -945,7 +937,7 @@ try {
           defineTool({
             name: "probe_spender",
             description: "Probe tool with its own spend",
-            parameters: Type.Object({}),
+            parameters: obj({}, { open: true }),
             replay: "safe",
             execute: async () => ({ output: [{ type: "text", text: "answered" }], usage: spend }),
           }),
@@ -1005,11 +997,14 @@ try {
     const feedHarness = await Harness.open(feedStorage, { models, registry, settings }, context);
     const entryWrites: { id: number; conversationId: number }[] = [];
     const mapWrites: (string | undefined)[] = [];
-    feedHarness.subscribeCommits((publication) => {
-      for (const change of publication.changes) {
-        if (change.type === "entry") entryWrites.push({ id: change.value.id, conversationId: change.value.conversationId });
-        else if (change.type === "document" && change.record.kind === "probe.channel") mapWrites.push(change.record.key);
-      }
+    feedHarness.observeCommits({
+      advance: (publication) => {
+        for (const change of publication.changes) {
+          if (change.type === "entry") entryWrites.push({ id: change.value.id, conversationId: change.value.conversationId });
+          else if (change.type === "document" && change.record.kind === "probe.channel") mapWrites.push(change.record.key);
+        }
+      },
+      end: () => {},
     });
     faux.setResponses([() => fauxAssistantMessage("first"), () => fauxAssistantMessage("second")]);
     const feedConversation = await feedHarness.createConversation(

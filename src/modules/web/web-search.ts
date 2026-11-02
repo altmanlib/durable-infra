@@ -1,5 +1,5 @@
-import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "@earendil-works/pi-durable";
+import { arr, int, obj, oneOf, opt, str } from "@earendil-works/pi-schema";
 
 import type { PromptSource } from "../../kernel/prompts.ts";
 import { keyForLog } from "../../kernel/service/conversation-key.ts";
@@ -52,26 +52,24 @@ function failure(error: SearchError): string {
 function parameters(search: SearchProvider, prompts: PromptSource) {
   const { recency, domains } = search.capabilities;
   const days: Recency[] = ["day", "week", "month", "year"];
-  return Type.Object({
-    query: Type.String({ minLength: MIN_QUERY_CHARS, description: prompts.get("tool.web_search.query") }),
-    max_results: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_RESULTS_LIMIT, description: prompts.get("tool.web_search.max_results") })),
-    ...(recency
-      ? {
-          recency: Type.Optional(
-            Type.Union(
-              days.map((value) => Type.Literal(value)),
-              { description: prompts.get("tool.web_search.recency") },
-            ),
-          ),
-        }
-      : {}),
-    ...(domains
-      ? {
-          include_domains: Type.Optional(Type.Array(Type.String(), { maxItems: 20, description: prompts.get("tool.web_search.include_domains") })),
-          exclude_domains: Type.Optional(Type.Array(Type.String(), { maxItems: 20, description: prompts.get("tool.web_search.exclude_domains") })),
-        }
-      : {}),
-  });
+  return obj(
+    {
+      query: str({ minLength: MIN_QUERY_CHARS, description: prompts.get("tool.web_search.query") }),
+      max_results: opt(int({ minimum: 1, maximum: MAX_RESULTS_LIMIT, description: prompts.get("tool.web_search.max_results") })),
+      ...(recency
+        ? {
+            recency: opt(oneOf(days, { description: prompts.get("tool.web_search.recency") })),
+          }
+        : {}),
+      ...(domains
+        ? {
+            include_domains: opt(arr(str(), { maxItems: 20, description: prompts.get("tool.web_search.include_domains") })),
+            exclude_domains: opt(arr(str(), { maxItems: 20, description: prompts.get("tool.web_search.exclude_domains") })),
+          }
+        : {}),
+    },
+    { open: true },
+  );
 }
 
 const text = (value: string) => [{ type: "text" as const, text: value }];
