@@ -58,6 +58,8 @@ export interface Module {
   readonly toolSpecs?: readonly ToolSpec[];
   /** Runs once when the core opens. Returns the conversation settings the module owns, if any. */
   prepare?(context: PrepareContext): Promise<readonly SettingSpec<unknown>[]>;
+  /** Deletes what the module keeps for the conversation `key` when the application forgets it; repeating it is harmless. */
+  forget?(key: string): Promise<void>;
   /** Called when the extension is built, once per open. */
   contribute(context: ContributeContext): Contribution;
 }

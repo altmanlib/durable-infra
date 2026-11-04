@@ -136,7 +136,13 @@ test("a row of a setting no longer registered is kept but not seen: get is undef
 });
 
 test("a stored value that cannot be decoded counts as not set, and is logged", async () => {
-  const rows = { list: async () => [], read: async () => "NOT-A-WORD", write: async () => {}, remove: async () => "missing" as const };
+  const rows = {
+    list: async () => [],
+    read: async () => "NOT-A-WORD",
+    write: async () => {},
+    remove: async () => "missing" as const,
+    removeAll: async () => {},
+  };
   const settings = new ConversationSettings(new SettingCatalog([word as SettingSpec<unknown>]), rows);
   let value: string | undefined = "x";
   const lines = await captureLogs(async () => {

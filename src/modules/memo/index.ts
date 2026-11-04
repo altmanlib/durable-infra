@@ -5,7 +5,7 @@ import type { PromptSource } from "../../kernel/prompts.ts";
 import { isShared } from "../../kernel/service/shared-tools.ts";
 import { createDeleteMemoTool, createGetMemoTool, createListMemosTool, createSetMemoTool, MEMO_TOOLS } from "./memo.ts";
 import { MEMO_PROMPTS } from "./prompts.ts";
-import { type MemoStore, openMemoEntries } from "./records/index.ts";
+import { type MemoEntries, openMemoEntries } from "./records/index.ts";
 
 export { MEMO_PROMPTS } from "./prompts.ts";
 
@@ -15,7 +15,7 @@ export const memoSection = (prompts: PromptSource) =>
 
 /** The memo of a shared conversation, kept in the business database (domain `memo`): everyone there may read and write it. */
 export function memoModule(): Module {
-  let memos: MemoStore | undefined;
+  let memos: MemoEntries | undefined;
   return {
     name: "memo",
     prompts: MEMO_PROMPTS,
@@ -23,6 +23,10 @@ export function memoModule(): Module {
     async prepare({ records }) {
       memos = await openMemoEntries(records);
       return [];
+    },
+    forget: async (key) => {
+      if (!memos) throw new Error("the memo module was used before it was prepared");
+      await memos.removeAll(key);
     },
     contribute: ({ prompts }) => {
       if (!memos) throw new Error("the memo module was used before it was prepared");

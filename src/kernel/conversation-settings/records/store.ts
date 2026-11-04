@@ -60,4 +60,9 @@ export class SettingRows {
       .executeTakeFirst();
     return Number(result.numDeletedRows) > 0 ? "cleared" : "missing";
   }
+
+  /** Removes every setting of the conversation. Throws when the write fails. */
+  async removeAll(conversationKey: string): Promise<void> {
+    await this.#db.deleteFrom("conversation_setting").where("conversation_key", "=", conversationKey).execute();
+  }
 }

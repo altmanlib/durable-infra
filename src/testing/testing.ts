@@ -111,6 +111,7 @@ export function toolDeps(overrides: Partial<TestDeps> = {}): TestDeps {
       read: unavailable("the settings"),
       write: unavailable("the settings"),
       remove: unavailable("the settings"),
+      removeAll: unavailable("the settings"),
     }),
     ...overrides,
   };

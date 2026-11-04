@@ -102,7 +102,7 @@ const searching: SearchProvider = {
 /** One setting registered, so the settings tools are installed and their descriptions read. */
 const oneSetting = new ConversationSettings(
   new SettingCatalog([{ name: "test.item", summary: "s", format: "f", check: (value) => ({ ok: true, value }), decode: (value) => value }]),
-  { list: async () => [], read: async () => undefined, write: async () => {}, remove: async () => "missing" },
+  { list: async () => [], read: async () => undefined, write: async () => {}, remove: async () => "missing", removeAll: async () => {} },
 );
 
 /** Gitea configured, so the issue tools are installed and their descriptions read; none is called here. */

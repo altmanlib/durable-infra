@@ -93,4 +93,9 @@ export class ConversationSettings {
     if (spec === undefined) return "unknown_setting";
     return this.#store.remove(key, spec.name);
   }
+
+  /** Take every setting of the conversation away; nothing to do when it has none. */
+  async clearAll(key: string): Promise<void> {
+    await this.#store.removeAll(key);
+  }
 }

@@ -7,7 +7,7 @@ import { SettingRows, type SettingRowsOptions } from "./store.ts";
 export type { SettingRemoveResult, SettingRows, StoredSetting } from "./store.ts";
 
 /** What the settings use of the rows; a test may hand them its own. */
-export type SettingStore = Pick<SettingRows, "list" | "read" | "write" | "remove">;
+export type SettingStore = Pick<SettingRows, "list" | "read" | "write" | "remove" | "removeAll">;
 
 /** What opening the table needs of the business database. */
 export type SettingTables = Pick<Records, "tables">;

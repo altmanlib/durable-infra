@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 
 import type { TranscriptContext } from "@earendil-works/pi-ai";
-import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
+import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 
 import { clockModule } from "../modules/clock/index.ts";
 import { giteaModule } from "../modules/gitea/index.ts";
@@ -219,4 +219,54 @@ test("the extra models of the gateway are the catalog of setModel, and a model o
   expect(await core.agent.setModel("gateway:1", { provider: core.agent.models()[1]?.provider ?? "", modelId: "big" })).toBe("saved");
   expect((await core.agent.modelOf("gateway:1")).modelId).toBe("big");
   expect(await core.agent.setModel("gateway:1", { provider: "faux", modelId: "base" })).toBe("unknown_model");
+});
+
+test("forgetting a key clears it everywhere the core keeps it, leaves other keys alone, and can be repeated", async () => {
+  const note: SettingSpec<string> = {
+    name: "test.note",
+    summary: "A note",
+    format: "text",
+    check: (input) => ({ ok: true, value: input }),
+    decode: (stored) => stored,
+  };
+  const noteModule: Module = { name: "note", contribute: () => ({}), prepare: async () => [note as SettingSpec<unknown>] };
+  core = await open([memoModule(), noteModule]);
+  const opened = core;
+  // Calls a memo tool in the key's shared conversation and gives the code of its result.
+  const memoCode = async (key: string, tool: string, args: Record<string, string>, requestId: string) => {
+    let code: string | undefined;
+    faux.setResponses([
+      fauxAssistantMessage([fauxToolCall(tool, args)], { stopReason: "toolUse" }),
+      (transcript) => {
+        const result = transcript.messages.findLast((message) => message.role === "toolResult");
+        code = (result?.details as { code?: string } | undefined)?.code;
+        return fauxAssistantMessage("done");
+      },
+    ]);
+    await (
+      await opened.agent.send(key, "memo", requestId, { shared: true })
+    ).answer;
+    return code;
+  };
+  for (const key of ["room:A", "room:B"]) {
+    expect(await memoCode(key, "set_memo", { name: "plan", body: "body" }, "r1")).toBe("saved");
+    await opened.conversationSettings.set(key, "test.note", "kept?", "test");
+  }
+  await opened.agent.delivered("room:A", "r1");
+  await opened.agent.delivered("room:B", "r1");
+  expect((await opened.insights.conversations()).items.map((item) => item.key).sort()).toEqual(["room:A", "room:B"]);
+  const spentBefore = (await opened.insights.usage({}, { key: "room:A" })).total.totalTokens;
+
+  await opened.forget("room:A");
+  await opened.forget("room:A");
+
+  expect(await opened.agent.history("room:A", 10)).toEqual([]);
+  expect(await opened.conversationSettings.get("room:A", note)).toBeUndefined();
+  expect((await opened.insights.conversations()).items.map((item) => item.key)).toEqual(["room:B"]);
+  expect(await opened.conversationSettings.get("room:B", note)).toBe("kept?");
+  expect(await memoCode("room:B", "get_memo", { name: "plan" }, "r2")).toBe("read");
+  // What was spent stays spent.
+  expect((await opened.insights.usage({}, { key: "room:A" })).total.totalTokens).toBe(spentBefore);
+  // A memo asked for under the key finds nothing: this starts a new conversation, so it comes last.
+  expect(await memoCode("room:A", "get_memo", { name: "plan" }, "r2")).toBe("missing");
 });

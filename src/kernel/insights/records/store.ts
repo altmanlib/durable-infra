@@ -50,6 +50,11 @@ export class InsightsStore {
     return row ? rowOf(row) : undefined;
   }
 
+  /** Takes the key out of the listing; its spend and cursors stay, being what was spent. */
+  async removeListing(key: string): Promise<void> {
+    await this.#db.deleteFrom("insights_conversation").where("key", "=", key).execute();
+  }
+
   /** Writes spend, cursor and listing row in one transaction, so a conversation is never counted twice or half. */
   async apply(commit: LedgerCommit): Promise<void> {
     await this.#db.transaction().execute(async (trx) => {

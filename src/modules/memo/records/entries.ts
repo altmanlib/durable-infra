@@ -114,4 +114,9 @@ export class MemoEntries {
     const result = await this.#db.deleteFrom("memo_entry").where("conversation_key", "=", conversationKey).where("name", "=", normalized).executeTakeFirst();
     return Number(result.numDeletedRows) > 0 ? "deleted" : "missing";
   }
+
+  /** Delete every entry of the conversation. Throws when the write fails. */
+  async removeAll(conversationKey: string): Promise<void> {
+    await this.#db.deleteFrom("memo_entry").where("conversation_key", "=", conversationKey).execute();
+  }
 }

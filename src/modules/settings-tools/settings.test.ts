@@ -200,6 +200,7 @@ test("storage that fails is a failure the model is told of, never a success, and
     read: async () => Promise.reject(new Error("disk")),
     write: async () => Promise.reject(new Error("SQLITE_FULL")),
     remove: async () => Promise.reject(new Error("disk")),
+    removeAll: async () => Promise.reject(new Error("disk")),
   };
   const t = tools(new ConversationSettings(new SettingCatalog([word as SettingSpec<unknown>]), broken));
   const lines = await captureLogs(async () => {

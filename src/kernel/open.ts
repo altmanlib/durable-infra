@@ -26,6 +26,12 @@ export type Core = {
   conversationSettings: ConversationSettings;
   logs: LogReader;
   records: Records;
+  /**
+   * Forgets the conversation of `key` everywhere the core keeps it: the conversation is unlinked and its tasks stopped
+   * (`AgentService.forget`), then its settings, what each module keeps, and its row in the listing are deleted. Spend already
+   * counted stays. The steps run in that order and stop at the first failure; repeating the call finishes the rest.
+   */
+  forget(key: string): Promise<void>;
   /** Close storage and records; call after the channels stop writing. */
   close(): Promise<void>;
 };
@@ -138,6 +144,12 @@ export async function openCore(options: OpenCoreOptions): Promise<Core> {
       conversationSettings: settings,
       logs: new LogReader({ dir: options.logDir }),
       records,
+      forget: async (key) => {
+        await agent.forget(key);
+        await settings.clearAll(key);
+        for (const module of modules) await module.forget?.(key);
+        await ledger.forget(key);
+      },
       close: async () => {
         try {
           await agent.close();

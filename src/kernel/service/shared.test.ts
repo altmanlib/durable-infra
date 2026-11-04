@@ -375,6 +375,7 @@ const noSettings = () =>
     read: async () => undefined,
     write: async () => {},
     remove: async () => "missing",
+    removeAll: async () => {},
   });
 
 const callOnce =

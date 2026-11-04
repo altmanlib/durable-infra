@@ -59,6 +59,11 @@ export class UsageLedger {
     return this.#schedule();
   }
 
+  /** Takes the key out of the listing, after the counting already queued, so that counting cannot bring it back. */
+  forget(key: string): Promise<void> {
+    return this.#enqueue(() => this.store.removeListing(key));
+  }
+
   /** Stops following commits and waits for the job in hand; what is left is counted at the next start. */
   async close(): Promise<void> {
     this.#closed = true;

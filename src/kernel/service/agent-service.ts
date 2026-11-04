@@ -11,6 +11,7 @@ import {
   type ConversationId,
   type ConversationView,
   createRegistry,
+  type Cursor,
   defineExtension,
   Harness,
   type HarnessSettings,
@@ -20,6 +21,7 @@ import {
   type Registry,
   section,
   type TaskId,
+  type TaskQuery,
   UserEntry,
 } from "@earendil-works/pi-durable";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
@@ -33,13 +35,13 @@ import { Settings } from "../settings/settings.ts";
 import { ChannelMap } from "./channel-map.ts";
 import type { AgentExtension, ExtensionHost } from "./host.ts";
 import { checkCatalog, modelName, moveToModel, sameModel, selectModel, type SetModelResult } from "./model-switch.ts";
-import { ConversationKeys, type Notice, NoticeFeed, type ScheduledEvent } from "./notices.ts";
+import { ConversationKeys, type Notice, NoticeFeed, Notices, type ScheduledEvent } from "./notices.ts";
 import { Outbox, type PendingTurn } from "./outbox.ts";
 import { DEFAULT_RATE_LIMIT, type RateLimit } from "./rate-limit.ts";
 import { SessionReader } from "./reader.ts";
 import { isShared, moveToSharedTools, privilegedToolsHook, sharedAgent, sharedToolsOf } from "./shared-tools.ts";
 import { DEFAULT_THINKING_LEVEL, moveToThinkingLevel } from "./thinking-level.ts";
-import { MAX_EVENT_DATA_CHARS, MAX_EVENT_KIND_CHARS, Timer, TIMER_TASK, TIMERS_KEY } from "./timers.ts";
+import { MAX_EVENT_DATA_CHARS, MAX_EVENT_KIND_CHARS, Timer, TIMER_TASK, type TimerInput, TIMERS_KEY } from "./timers.ts";
 import { DEFAULT_MAX_TOOL_ROUNDS, toolBudgetHook } from "./tool-budget.ts";
 import { narrowTools, type ToolSelector } from "./tool-filter.ts";
 import { assistantText, ChatMessageEntry, type HistoryLine, historyLines, normalizeSpeaker, type Speaker, userContent, WindowEntry } from "./transcript.ts";
@@ -447,6 +449,51 @@ export class AgentService {
     const task = Number.isSafeInteger(taskId) ? await this.#harness.getTask(taskId, context) : undefined;
     if (task?.kind !== TIMER_TASK) return "gone";
     return (await this.#harness.abortTask(taskId, context)) === "marked" ? "cancelled" : "gone";
+  }
+
+  /**
+   * Stop and unlink the conversation of `key`: its run and unfinished tasks (reminders, scheduled events) are aborted, and its
+   * undelivered inputs and notices dropped. The key then has no conversation, so a later `send` starts a new one. Durable
+   * cannot delete a conversation: its entries stay in storage, unreachable by key. Repeating it, or an unknown key, is harmless.
+   * The caller must stop sending to the key first: an input racing with it may start a new conversation.
+   */
+  async forget(key: ConversationKey): Promise<void> {
+    const conversation = await this.#find(key);
+    if (conversation) {
+      await conversation.abort(context);
+      for (const id of await this.#activeTasks({ conversationId: conversation.id })) await this.#harness.abortTask(id, context);
+    }
+    const timers = await this.#find(TIMERS_KEY);
+    if (timers) {
+      const owned = await this.#activeTasks({ conversationId: timers.id, kind: TIMER_TASK }, (input) => (input as TimerInput).key === key);
+      for (const id of owned) await this.#harness.abortTask(id, context);
+    }
+    await this.#harness.commit(async (tx) => {
+      const outbox = await tx.doc(Outbox);
+      for (let i = outbox.items.length - 1; i >= 0; i--) if (outbox.items[i]?.key === key) outbox.items.splice(i, 1);
+      const notices = await tx.doc(Notices);
+      for (let i = notices.items.length - 1; i >= 0; i--) if (notices.items[i]?.key === key) notices.items.splice(i, 1);
+      if (!conversation) return;
+      await tx.retireDoc(ChannelMap, key);
+      await tx.retireDoc(ConversationKeys, String(conversation.id));
+    }, context);
+    log.info("agent.forgotten", { key, conversation: conversation ? Number(conversation.id) : "none" });
+  }
+
+  /** The tasks that have not finished and are not already being aborted, of those matching the query, whose input passes `wanted`. */
+  async #activeTasks(query: Pick<TaskQuery, "conversationId" | "kind">, wanted: (input: unknown) => boolean = () => true): Promise<TaskId[]> {
+    return this.#harness.commit(async (tx) => {
+      const found: TaskId[] = [];
+      for (const status of ["pending", "running", "waiting", "sleeping"] as const) {
+        let cursor: Cursor | undefined;
+        do {
+          const page = await tx.scanTasks({ ...query, status }, 200, cursor);
+          for (const record of page.items) if (!record.abortRequested && wanted(record.input)) found.push(record.id as TaskId);
+          cursor = page.next;
+        } while (cursor !== undefined);
+      }
+      return found;
+    }, context);
   }
 
   /** The model new conversations start with, unless `send` names another. */
