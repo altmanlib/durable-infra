@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { awaitWithContext, BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
-import { type AssistantMessage } from "@earendil-works/pi-ai";
+import type { AssistantMessage, TranscriptContext } from "@earendil-works/pi-ai";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
 import {
@@ -988,6 +988,69 @@ try {
       `models=${counted} entries=${requested}`,
     );
     await sectionHarness.close(context);
+  }
+
+  // A host narrows what one conversation offers with modelTools: hidden tools leave the request, a call to one is refused without running it, and a later change applies from the next turn.
+  {
+    const ran: string[] = [];
+    const answers: string[] = [];
+    const offeredBy: string[][] = [];
+    const named = (name: string) =>
+      defineTool({
+        name,
+        description: `Probe tool ${name}`,
+        parameters: obj({}, { open: true }),
+        replay: "safe",
+        execute: async () => {
+          ran.push(name);
+          return { output: [{ type: "text", text: `${name} ran` }] };
+        },
+      });
+    const probeB = named("probe_b");
+    const registry = createRegistry();
+    registry.install(defineExtension({ name: "probe-narrow", tools: [named("probe_a"), probeB] }));
+    const narrowStorage = await openNodeSqliteStorage(join(dir, "narrow.sqlite"));
+    const narrowHarness = await Harness.open(narrowStorage, { models, registry, settings }, context);
+    const offeredNow = (transcript: TranscriptContext) => {
+      const names = new Set<string>();
+      for (const message of transcript.messages) {
+        if (message.role !== "system") continue;
+        for (const each of message.toolsRemoved ?? []) names.delete(each.name);
+        for (const each of message.toolsAdded ?? []) names.add(each.name);
+      }
+      return [...names].sort();
+    };
+    const scripted = (calls: string | undefined) => (transcript: TranscriptContext) => {
+      offeredBy.push(offeredNow(transcript));
+      const last = transcript.messages.at(-1);
+      if (last?.role === "toolResult") {
+        answers.push(last.content.map((part) => (part.type === "text" ? part.text : "")).join(""));
+        return fauxAssistantMessage("done");
+      }
+      return calls ? fauxAssistantMessage(fauxToolCall(calls, {}), { stopReason: "toolUse" }) : fauxAssistantMessage("ok");
+    };
+    const narrowConversation = await narrowHarness.createConversation({ ownership: { kind: "ownerless" }, agent }, context);
+    const turn = async (calls: string | undefined) => {
+      faux.setResponses([scripted(calls), scripted(calls)]);
+      await (await narrowConversation.submit({ type: "input", content: "go" }, context)).wait(context);
+      await narrowHarness.waitForIdle(context);
+    };
+    await turn(undefined);
+    await narrowConversation.configure({ modelTools: { remove: [probeB] } }, context);
+    await turn("probe_b");
+    await narrowConversation.configure({ modelTools: null }, context);
+    await turn("probe_b");
+    check(
+      "modelTools hides a tool from the request, refuses a call to it without running it, and a later change applies from the next turn",
+      JSON.stringify(offeredBy.map((names) => names.join("+"))) ===
+        JSON.stringify(["probe_a+probe_b", "probe_a", "probe_a", "probe_a+probe_b", "probe_a+probe_b"]) &&
+        answers.length === 2 &&
+        answers[0]?.includes("not available") === true &&
+        answers[1] === "probe_b ran" &&
+        ran.join(",") === "probe_b",
+      `offered=${offeredBy.map((names) => names.join("+")).join(" | ")} ran=${ran.join(",")} answers=${answers.join(" | ")}`,
+    );
+    await narrowHarness.close(context);
   }
 
   // 11. The ledger follows commits: new entries and new family members are published, and entries scan from an ID on.

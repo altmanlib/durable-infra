@@ -99,7 +99,8 @@ export async function moveToSharedTools(harness: Harness, conversations: AsyncIt
     const stored = agent?.tools;
     if (!Array.isArray(stored)) continue;
     const from = [...stored];
-    if (sameNames(from, target) && Array.isArray(agent?.modelTools) && sameNames(agent.modelTools, target)) continue;
+    // `modelTools` may be a narrower list the host's tool selector chose; it stays until the next input.
+    if (sameNames(from, target) && Array.isArray(agent?.modelTools) && agent.modelTools.every((name) => target.includes(name))) continue;
     moves.push({ id, from });
   }
   if (moves.length === 0) return 0;

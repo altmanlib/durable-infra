@@ -69,6 +69,7 @@ export { type KeyedApi, keyOf } from "./service/conversation-key.ts";
 export type { AgentExtension, ExtensionHost } from "./service/host.ts";
 export { isEvent, type Notice, type ScheduledEvent } from "./service/notices.ts";
 export type { HistoryLine, Speaker } from "./service/transcript.ts";
+export type { AllowedTools, ToolSelector } from "./service/tool-filter.ts";
 export { ROUND_SEPARATOR, type ToolActivity } from "./service/turn-feed.ts";
 export { AccessList, type AllowlistView, type ChannelAccess, type ChannelList, type DeniedUser } from "./settings/access.ts";
 export type { Change, ChangeLog } from "./settings/change-log.ts";

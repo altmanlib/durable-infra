@@ -146,6 +146,8 @@ ends at the session — it has no notion of a channel, or of a user who has or h
 The outbox is the record of that last step, kept in Durable's own storage, and an item leaves it only on
 the channel's confirmation, never on the turn's completion.
 
+A host that restricts tools per conversation has its selector asked at this door, once per new input (§10).
+
 Two neighbours complete the picture. `record()` writes a message the bot was not addressed by (say, in a
 group) into the conversation as a stored entry — no turn, no outbox — so the model sees it with the next
 question. And in a shared conversation an input carries its **speaker**; the outbox item keeps it, and
@@ -336,6 +338,31 @@ the conversations' own model, without tools), and its search sits behind the `Se
 — Tavily is the built-in provider, and any other must pass the same contract tests (§11). The gitea
 module is a client, a setting and the five issue tools, and nothing more.
 
+**Per-conversation tool selection.** The tools are installed once for the whole application, but a host
+may decide, conversation by conversation, which of them a conversation is offered: the `allowedTools`
+option of `AgentService` is a selector `(key) => names | undefined`, sync or async, typically a read of
+the host's own database. `send` asks it with the conversation key for every new input — after admission,
+before the input is recorded, never for a replay — and writes the answer into the conversation's
+`modelTools`, the Durable setting that narrows what the model is offered. Durable then does the rest: a
+tool left out is not in the request the model gets, and a call to one anyway (a hallucination, or a stale
+turn) is refused with "Tool X is not available" and never runs. Because the answer is stored with the
+conversation, a change of it applies from the next input of that conversation, and a restart does not undo
+it.
+
+- The selector only narrows. A name that is not an installed tool is ignored, a tool a one-to-one
+  conversation is not offered (§10 scope) is not granted by naming it, and a shared conversation stays
+  within its shared tools. `undefined` means no restriction and lifts an earlier one; an empty list leaves
+  the model with no tools.
+- A selector that throws makes `send` reject before anything is recorded; the input is not accepted.
+- Omitting the option changes nothing: nothing is asked and nothing is written. Dropping it later does not
+  clear what it stored; return `undefined` for a conversation to lift its restriction first.
+- It is asked for every conversation key the host sends to, internal ones included; the selector decides
+  what an internal key means. The timers conversation (`core:timers`) runs no model turn and is never
+  asked, and `record()` and `schedule()` start no turn and do not ask it either.
+- It acts on the offered set, not on stored identifiers: tool names, conversation keys and documents keep
+  their names. An input sent while a run is still working changes the tools from that run's next model
+  request on, and a call to a tool removed meanwhile is refused like any other.
+
 **Persistent identifiers.** A module's tool names, task names, prompt ids, setting names and table
 names, the provider and id of every model in a catalog (conversations store them), the `builtin-tools` extension name, conversation keys, and the `kind` of every application
 document are stored — in conversations, in stored edits, in the database. **Never rename a released
@@ -344,7 +371,7 @@ one.** When a rename is unavoidable, the old name is migrated as the core or the
 and the changelog says it happened.
 
 Key files: `src/kernel/module.ts`, `src/modules/` (one directory per module),
-`src/kernel/service/shared-tools.ts`.
+`src/kernel/service/shared-tools.ts`, `src/kernel/service/tool-filter.ts`.
 
 ## 11. Testing
 

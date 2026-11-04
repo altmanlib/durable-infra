@@ -41,6 +41,7 @@ import { isShared, moveToSharedTools, privilegedToolsHook, sharedAgent, sharedTo
 import { DEFAULT_THINKING_LEVEL, moveToThinkingLevel } from "./thinking-level.ts";
 import { MAX_EVENT_DATA_CHARS, MAX_EVENT_KIND_CHARS, Timer, TIMER_TASK, TIMERS_KEY } from "./timers.ts";
 import { DEFAULT_MAX_TOOL_ROUNDS, toolBudgetHook } from "./tool-budget.ts";
+import { narrowTools, type ToolSelector } from "./tool-filter.ts";
 import { assistantText, ChatMessageEntry, type HistoryLine, historyLines, normalizeSpeaker, type Speaker, userContent, WindowEntry } from "./transcript.ts";
 import { type ToolActivity, TurnFeed } from "./turn-feed.ts";
 
@@ -145,6 +146,12 @@ export type AgentServiceOptions = {
   sharedTools?: readonly string[];
   /** Tools only runs whose inputs are all `privileged` may call in shared conversations; others get `tool.not-permitted`. */
   privilegedTools?: readonly string[];
+  /**
+   * Which tools a conversation may use, asked with its key before each new input (never for a replay). The answer applies from the next
+   * model request of that conversation; omitted, nothing changes. `undefined` lifts any earlier restriction. It throws: `send` rejects
+   * before recording the input. It narrows only: it never adds a tool the conversation would not have, and `sharedTools` still applies.
+   */
+  allowedTools?: ToolSelector;
 };
 
 const context = BACKGROUND_CONTEXT;
@@ -268,6 +275,8 @@ export class AgentService {
       return { requestId, deltas: closed.deltas, answer, text: answer, tools: closed.tools };
     }
     const conversation = await this.#obtain(key, options.shared, options.model);
+    // A replay keeps the tools its first attempt had, so a recovered run is not changed under it.
+    if (this.#options.allowedTools && !(await this.#recorded(key, requestId))) await this.#applyAllowedTools(key, conversation, this.#options.allowedTools);
     // Record the input before submitting it, so a crash in between can still be replayed from the outbox.
     const unmatched = await this.#harness.commit(async (tx) => {
       const outbox = await tx.doc(Outbox);
@@ -362,10 +371,31 @@ export class AgentService {
     return "moved";
   }
 
+  /** Whether the input of `requestId` is in the outbox: accepted once and not yet confirmed delivered. */
+  async #recorded(key: ConversationKey, requestId: string): Promise<boolean> {
+    const outbox = await this.#harness.snapshot(Outbox, context);
+    return outbox?.items.some((item) => item.key === key && item.requestId === requestId) ?? false;
+  }
+
+  /** Make the conversation offer the tools `select` allows for `key`; stored on the conversation, so it holds until the next input. */
+  async #applyAllowedTools(key: ConversationKey, conversation: Conversation, select: ToolSelector): Promise<void> {
+    let allowed;
+    try {
+      allowed = await select(key);
+    } catch (error) {
+      log.error("agent.allowed_tools_failed", { key }, error);
+      throw error;
+    }
+    const registered = (this.#registry?.snapshot().tools() ?? []).map(({ tool }) => tool);
+    const change = narrowTools(await this.#harness.snapshot(AgentDoc, conversation.id, context), registered, allowed);
+    if (!change) return;
+    await conversation.configure(change, context);
+    log.info("agent.tools_filtered", { key, offered: (await conversation.agent(context)).tools.map((tool) => tool.name).join(",") });
+  }
+
   /** Whether this input may start a turn. A replay of an input already accepted always may. */
   async #admit(key: ConversationKey, requestId: string): Promise<boolean> {
-    const outbox = await this.#harness.snapshot(Outbox, context);
-    if (outbox?.items.some((item) => item.key === key && item.requestId === requestId)) return true;
+    if (await this.#recorded(key, requestId)) return true;
     return this.#limiter.tryStart(key, (this.#options.now?.() ?? new Date()).getTime());
   }
 
