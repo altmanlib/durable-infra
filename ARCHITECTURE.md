@@ -106,7 +106,7 @@ hands the next what it needs.
 8. **`AgentService.open`** receives all of it, plus the extension factory: when the service builds its
    extension, each module contributes, and the parts are merged into the single extension `builtin-tools`.
    That name is stored by conversations — a persistent identifier (§10).
-9. The `Core` is returned. The model switch of §7 runs inside the service's open, before work resumes.
+9. The `Core` is returned. The model switch of §7 runs inside the service's open, before work resumes. Besides the services it carries `forget(key)`, the one call that clears a conversation key everywhere (§7).
 
 Key files: `src/kernel/open.ts`, `src/kernel/module.ts`, `src/kernel/config.ts`.
 
@@ -219,7 +219,9 @@ them only as behaviour.
   one line per moved conversation. If a per-conversation choice is ever added, this alignment must skip the
   conversations that made one.
 
-Key files: `src/kernel/service/agent-service.ts` (`compact`, `keepRecent`),
+**Forgetting a key.** An application whose chats can end (a deleted room, a closed account) calls `Core.forget(key)`. `AgentService.forget` does the part Durable owns: it aborts the conversation's run and its unfinished tasks (reminders, and the scheduled events of that key), drops the key's undelivered inputs and notices, and retires the key's mappings, so the key has no conversation and a later `send` starts a new one. Then the core deletes what it keeps beside Durable: the conversation settings, what each module keeps (`Module.forget`, §10), and the key's row in the listing. Spend already counted stays, being what was spent. Durable cannot delete a conversation, so its entries stay in storage, reachable by no key. The steps run in that order and stop at the first failure; every step is idempotent, so repeating the call finishes the rest. The caller must stop sending to the key first, or an input racing with it starts a new conversation.
+
+Key files: `src/kernel/service/agent-service.ts` (`compact`, `keepRecent`, `forget`), `src/kernel/open.ts` (`Core.forget`),
 `src/kernel/service/tool-budget.ts`, `src/kernel/service/model-switch.ts`,
 `src/kernel/service/thinking-level.ts`, `src/kernel/service/rate-limit.ts`.
 
@@ -298,11 +300,12 @@ with rows decoded by their owners.
 ## 10. Modules
 
 A module is a feature an application opens or leaves out. The contract (`src/kernel/module.ts`) is all
-there is to one: a name, its prompt entries, the names of its tools, and two hooks that follow the
+there is to one: a name, its prompt entries, the names of its tools, and the hooks that follow the
 assembly of §4.
 
 - `prepare` runs when the core opens, before the conversation settings: the module opens its tables in
   the business database and returns the conversation settings it owns.
+- `forget` (optional) deletes what the module keeps for one conversation key when the application forgets it (§7); the memo module deletes the key's entries.
 - `contribute` runs when the extension is built, with the settings and the harness open: it returns its
   **contribution** — tools, system-prompt sections, and tasks (durable generation tasks, such as the
   one that waits for a reminder's time).
