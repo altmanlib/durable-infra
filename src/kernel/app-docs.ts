@@ -1,4 +1,4 @@
-import type { JsonValue } from "@earendil-works/chord";
+import type { JsonValue } from "@earendil-works/chord/json";
 import { type CheckpointInfo, defineDoc, defineDocFamily, type JsonObject } from "@earendil-works/pi-durable";
 
 /** The one way to define the app's own Durable documents (`app.*`), each with a checkpoint: without one, the storage grows without end. */
