@@ -34,7 +34,7 @@
     "format": "bun fmt src",
     "format:check": "bun fmt --check src",
     "typecheck": "bun check",
-    "test": "bun test",
+    "test": "bun test --dots --parallel=4",
     "ci": "bun run format:check && bun run typecheck && bun run test",
     "probe": "bun run src/probe-durable.ts",
     "release": "bash scripts/release.sh"
