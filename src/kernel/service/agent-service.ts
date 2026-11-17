@@ -45,6 +45,7 @@ import { MAX_EVENT_DATA_CHARS, MAX_EVENT_KIND_CHARS, Timer, TIMER_TASK, type Tim
 import { DEFAULT_MAX_TOOL_ROUNDS, toolBudgetHook } from "./tool-budget.ts";
 import { narrowTools, type ToolSelector } from "./tool-filter.ts";
 import { assistantText, ChatMessageEntry, type HistoryLine, historyLines, normalizeSpeaker, type Speaker, userContent, WindowEntry } from "./transcript.ts";
+import { classifyTurnFailure, DEFAULT_STREAM_TIMEOUT_MS, turnFailureDetail } from "./turn-failure.ts";
 import { type ToolActivity, TurnFeed } from "./turn-feed.ts";
 
 /** Channel-neutral conversation key such as "<channel>:<id>" or "terminal". */
@@ -166,6 +167,12 @@ export function currentDateLine(now: Date): string {
   return `Today is ${date} (${weekday}).`;
 }
 
+/** Fills `stream.timeoutMs` when the caller left it unset, so a hung provider fails before the SDK's 10-minute default. */
+function withDefaultStreamTimeout(settings?: HarnessSettings): HarnessSettings {
+  if (settings?.stream?.timeoutMs !== undefined) return settings;
+  return { ...settings, stream: { ...settings?.stream, timeoutMs: DEFAULT_STREAM_TIMEOUT_MS } };
+}
+
 /** One conversation as the console lists it. */
 export type ConversationInfo = {
   /** The channel key, such as `<channel>:<id>`. */
@@ -235,7 +242,7 @@ export class AgentService {
     // Fail fast before opening storage.
     const catalog = checkCatalog(options.models, options.model, options.catalog);
     const storage = await openNodeSqliteStorage(options.databasePath);
-    const harness = await Harness.open(storage, { models: options.models, registry, settings: options.settings }, context);
+    const harness = await Harness.open(storage, { models: options.models, registry, settings: withDefaultStreamTimeout(options.settings) }, context);
     if (options.onCommit) harness.observeCommits({ advance: options.onCommit, end: () => {} });
     // Before the scheduler starts, so leftover tasks find their code.
     const host: ExtensionHost = { abortTask: (taskId) => harness.abortTask(taskId, context) };
@@ -318,7 +325,7 @@ export class AgentService {
     const answer = (async () => {
       try {
         const settled = await submission.wait(context);
-        if (settled.status === "unanswered") throw new TurnFailed(settled.reason, settled.detail);
+        if (settled.status === "unanswered") throw new TurnFailed(classifyTurnFailure(settled.reason, settled.detail), settled.detail);
         if (settled.type !== "input") throw new TurnFailed(`unexpected ${settled.type} submission`);
         const answerId = settled.answer;
         const entry = await conversation.commit((tx) => tx.entry(answerId), context);
@@ -330,7 +337,10 @@ export class AgentService {
         log.info("turn.done", { key, requestId, ms: Date.now() - started, toolCalls: feed.toolCalls, inputTokens: usage?.input, outputTokens: usage?.output });
         return final;
       } catch (error) {
-        if (error instanceof TurnFailed) log.warn("turn.failed", { key, requestId, reason: error.reason, ms: Date.now() - started });
+        if (error instanceof TurnFailed) {
+          const detail = turnFailureDetail(error.detail);
+          log.warn("turn.failed", { key, requestId, reason: error.reason, ms: Date.now() - started, ...(detail ? { detail } : {}) });
+        }
         throw error;
       } finally {
         unsubscribe();

@@ -65,6 +65,7 @@ export {
   type SendToKey,
   startNotices,
 } from "./service/delivery.ts";
+export { classifyTurnFailure, DEFAULT_STREAM_TIMEOUT_MS, turnFailureDetail } from "./service/turn-failure.ts";
 export { type KeyedApi, keyOf } from "./service/conversation-key.ts";
 export type { AgentExtension, ExtensionHost } from "./service/host.ts";
 export { isEvent, type Notice, type ScheduledEvent } from "./service/notices.ts";

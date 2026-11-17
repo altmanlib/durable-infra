@@ -15,7 +15,7 @@ const on = (prefix: string) => (key: string) => key.startsWith(prefix);
 
 const { faux, models, model } = fauxSetup();
 
-let failNext = false;
+let failMessage: string | undefined;
 let lastRequest: TranscriptContext | undefined;
 
 function lastUserText(transcript: TranscriptContext): string {
@@ -29,9 +29,10 @@ function respond(transcript: TranscriptContext): AssistantMessage {
     return fauxAssistantMessage("## Summary\ntest summary");
   }
   lastRequest = transcript;
-  if (failNext) {
-    failNext = false;
-    return fauxAssistantMessage("", { stopReason: "error", errorMessage: "boom" });
+  if (failMessage !== undefined) {
+    const errorMessage = failMessage;
+    failMessage = undefined;
+    return fauxAssistantMessage("", { stopReason: "error", errorMessage });
   }
   return fauxAssistantMessage(`answer to ${lastUserText(transcript)}: ${"word ".repeat(80)}end`);
 }
@@ -58,7 +59,7 @@ async function collect(turn: Turn): Promise<string[]> {
 
 beforeEach(async () => {
   faux.setResponses(Array.from({ length: 100 }, () => respond));
-  failNext = false;
+  failMessage = undefined;
   service = await open();
 });
 
@@ -140,11 +141,19 @@ test("the conversation cache keeps nothing once lookups settle", async () => {
 });
 
 test("a failed model call rejects the answer with TurnFailed and ends the deltas", async () => {
-  failNext = true;
+  failMessage = "boom";
   const turn = await service.send("k", "hello", "r1");
   await collect(turn);
   const error = await turn.answer.catch((caught: unknown) => caught);
   expect(error).toBeInstanceOf(TurnFailed);
+  expect(error).toMatchObject({ reason: "model_error" });
+});
+
+test("a timed-out model call is classified as provider_timeout", async () => {
+  failMessage = "Request timed out after 60000ms";
+  const turn = await service.send("k", "hello", "r1");
+  const error = await turn.answer.catch((caught: unknown) => caught);
+  expect(error).toMatchObject({ name: "TurnFailed", reason: "provider_timeout" });
 });
 
 test("reset hides earlier turns from the model but keeps history", async () => {

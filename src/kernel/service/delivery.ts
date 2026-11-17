@@ -8,15 +8,15 @@ import { isEvent, type Notice, type ScheduledEvent } from "./notices.ts";
 /** Sends text to the user behind a key; throws if not sent. Replay passes `requestId` so the answer can be tied to its message. */
 export type SendToKey = (key: ConversationKey, text: string, requestId?: string) => Promise<void>;
 
-/** What a user reads instead of an answer: the stand-in for an empty one, and why there is none. */
-export type AnswerTexts = { empty: string; failure: (reason: string) => string };
+/** What a user reads instead of an answer: the stand-in for an empty one, and why there is none (`reason` is already classified). */
+export type AnswerTexts = { empty: string; failure: (reason: string, detail?: unknown) => string };
 
 /** The text a finished turn shows the user: the answer, the stand-in for an empty one, or why there is none. */
 export function answerText(answer: Promise<string>, texts: AnswerTexts): Promise<string> {
   return answer.then(
     (value) => (value.trim() === "" ? texts.empty : value),
     (error: unknown) => {
-      if (error instanceof TurnFailed) return texts.failure(error.reason);
+      if (error instanceof TurnFailed) return texts.failure(error.reason, error.detail);
       throw error;
     },
   );
