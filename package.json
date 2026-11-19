@@ -29,7 +29,7 @@
     "./testing": "./src/testing/index.ts",
     "./package.json": "./package.json"
   },
-  "packageManager": "bun@1.4.4",
+  "packageManager": "bun@1.4.5",
   "scripts": {
     "format": "bun fmt src",
     "format:check": "bun fmt --check src",
